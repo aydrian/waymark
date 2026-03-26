@@ -1,0 +1,64 @@
+---
+import TripLayout from '../../layouts/TripLayout.astro';
+import TripHeader from '../../components/TripHeader.astro';
+import DayFilter from '../../components/DayFilter.astro';
+import DaySection from '../../components/DaySection.astro';
+import TripMap from '../../components/TripMap.astro';
+import PinGateForm from '../../components/PinGateForm.astro';
+import { getTrip } from '../../lib/kv';
+import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
+
+const { id } = Astro.params as { id: string };
+
+// 1. Load trip
+const trip = await getTrip(Astro.locals.runtime.env.TRIPS, id);
+if (!trip) {
+  return new Response(null, { status: 404 });
+}
+
+// 2. Check access cookie
+const cookies = parseCookies(Astro.request.headers.get('Cookie'));
+const rawCookie = cookies[cookieName()];
+let authorized = false;
+if (rawCookie) {
+  const tripId = await verifyTripCookie(
+    decodeURIComponent(rawCookie),
+    Astro.locals.runtime.env.COOKIE_SIGNING_SECRET,
+  );
+  authorized = tripId === id;
+}
+
+// 3. Day filter from query param
+const dayParam = Astro.url.searchParams.get('day');
+const activeDay = dayParam ? parseInt(dayParam, 10) : null;
+const visibleDays = activeDay
+  ? trip.days.filter(d => d.dayNumber === activeDay)
+  : trip.days;
+
+// 4. Collect all items with coords for map
+const allItems = trip.days.flatMap(d => d.items);
+---
+<TripLayout title={trip.title}>
+  {!authorized ? (
+    <PinGateForm tripId={id} />
+  ) : (
+    <main>
+      <TripHeader trip={trip} />
+      <TripMap
+        items={allItems}
+        centerLat={trip.map?.centerLat}
+        centerLng={trip.map?.centerLng}
+      />
+      <DayFilter totalDays={trip.days.length} activeDay={activeDay} tripId={id} />
+      <div class="py-4">
+        {visibleDays.length === 0 ? (
+          <p class="px-4 py-8 text-center text-sm text-stone-400">
+            Day {activeDay} not found.
+          </p>
+        ) : (
+          visibleDays.map(day => <DaySection day={day} />)
+        )}
+      </div>
+    </main>
+  )}
+</TripLayout>
