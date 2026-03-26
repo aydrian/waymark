@@ -18,6 +18,7 @@ const mapData = JSON.stringify({
     title: i.title,
     type: i.type,
     location: i.location,
+    address: i.address,
   })),
   center: centerLat !== undefined && centerLng !== undefined ? [centerLat, centerLng] : null,
   zoom: zoom ?? null,
@@ -66,7 +67,8 @@ const mapData = JSON.stringify({
         iconAnchor: [6, 6],
       });
       const marker = L.marker([item.lat, item.lng], { icon });
-      const popup = `<strong>${item.title}</strong>${item.location ? `<br><span style="font-size:0.75rem">${item.location}</span>` : ''}`;
+      const detail = item.address ?? item.location;
+      const popup = `<strong>${item.title}</strong>${detail ? `<br><span style="font-size:0.75rem">${detail}</span>` : ''}`;
       marker.bindPopup(popup);
       marker.addTo(map);
       markers.push(marker);

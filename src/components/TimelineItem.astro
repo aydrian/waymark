@@ -26,6 +26,9 @@ const icons: Record<string, string> = {
     {item.location && (
       <p class="text-xs text-stone-500 mt-0.5">{item.location}</p>
     )}
+    {item.address && (
+      <p class="text-xs text-stone-400 mt-0.5">{item.address}</p>
+    )}
     {item.vendor && (
       <p class="text-xs text-stone-400 mt-0.5">via {item.vendor}</p>
     )}

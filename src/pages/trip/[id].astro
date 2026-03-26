@@ -37,8 +37,8 @@ const visibleDays = activeDay
   ? trip.days.filter(d => d.dayNumber === activeDay)
   : trip.days;
 
-// 4. Collect all items with coords for map
-const allItems = trip.days.flatMap(d => d.items);
+// 4. Collect items for map — scoped to the active day filter if set
+const mapItems = visibleDays.flatMap(d => d.items);
 ---
 <TripLayout title={trip.title}>
   {!authorized ? (
@@ -47,9 +47,10 @@ const allItems = trip.days.flatMap(d => d.items);
     <main>
       <TripHeader trip={trip} />
       <TripMap
-        items={allItems}
-        centerLat={trip.map?.centerLat}
-        centerLng={trip.map?.centerLng}
+        items={mapItems}
+        centerLat={activeDay === null ? trip.map?.centerLat : undefined}
+        centerLng={activeDay === null ? trip.map?.centerLng : undefined}
+        zoom={activeDay === null ? trip.map?.zoom : undefined}
       />
       <DayFilter totalDays={trip.days.length} activeDay={activeDay} tripId={id} />
       <div class="py-4">
