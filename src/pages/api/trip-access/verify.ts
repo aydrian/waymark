@@ -4,6 +4,10 @@ import { verifyPin } from '../../../lib/pin';
 import { signTripCookie, buildSetCookieHeader } from '../../../lib/cookie';
 import { z } from 'zod';
 
+// Sentinel used for constant-time dummy PIN check when trip is not found
+const SENTINEL_SALT = '0000000000000000000000000000000000000000';
+const SENTINEL_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
+
 const BodySchema = z.object({
   id: z.string(),
   pin: z.string().min(1).max(20),
@@ -31,7 +35,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { id, pin } = result.data;
   const trip = await getTrip(locals.runtime.env.TRIPS, id);
   if (!trip) {
-    // Return 401 (not 404) to avoid leaking trip existence via timing
+    // Run dummy verifyPin to match timing of the successful-lookup path
+    await verifyPin(pin, SENTINEL_SALT, SENTINEL_HASH);
     return new Response(JSON.stringify({ error: 'Invalid PIN' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

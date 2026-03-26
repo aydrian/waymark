@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   await putTrip(locals.runtime.env.TRIPS, result.data);
 
   return new Response(JSON.stringify({ ok: true, id: result.data.id, updatedAt: result.data.updatedAt }), {
-    status: 200,
+    status: 201,
     headers: { 'Content-Type': 'application/json' },
   });
 };
