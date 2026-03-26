@@ -1,43 +1,187 @@
-# Astro Starter Kit: Minimal
+# Waymark
 
-```sh
-npm create astro@latest -- --template minimal
+Mobile-first travel itinerary app built on Astro v6 + Cloudflare Workers. Itineraries are gated by a PIN, stored in Cloudflare KV, and accessible via a machine-to-machine admin API for AI agents.
+
+## Stack
+
+- **Astro v6** — SSR on Cloudflare Workers
+- **Cloudflare KV** — one JSON document per trip
+- **Tailwind CSS v4** — mobile-first styling
+- **Zod** — schema validation
+- **Web Crypto API** — PBKDF2 PIN hashing, HMAC-SHA256 cookie signing
+
+## Setup
+
+```bash
+bun install
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Required Bindings & Secrets
 
-## 🚀 Project Structure
+| Name | Type | Description |
+|---|---|---|
+| `TRIPS` | KV Namespace | Stores itinerary documents |
+| `ADMIN_API_TOKEN` | Secret | Bearer token for admin API |
+| `COOKIE_SIGNING_SECRET` | Secret | HMAC key for signed access cookies |
 
-Inside of your Astro project, you'll see the following folders and files:
+## Local Dev
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+1. Create a `.dev.vars` file in the project root:
+
+```
+ADMIN_API_TOKEN=dev-admin-token-change-in-prod
+COOKIE_SIGNING_SECRET=dev-cookie-secret-32-chars-minimum
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+2. Create KV namespaces (one-time setup):
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```bash
+wrangler kv namespace create TRIPS
+wrangler kv namespace create TRIPS --preview
+```
 
-Any static assets, like images, can be placed in the `public/` directory.
+Update `wrangler.jsonc` with the returned IDs.
 
-## 🧞 Commands
+3. Start the dev server:
 
-All commands are run from the root of the project, from a terminal:
+```bash
+bun run dev
+```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+The app runs at `http://localhost:4321`.
 
-## 👀 Want to learn more?
+## Seeding Sample Data
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+The sample trip has ID `a8k3m2q9` and PIN `1234`.
+
+```bash
+# 1. Generate the seed JSON
+bun scripts/seed.ts > /tmp/trip.json
+
+# 2. Seed into local KV
+wrangler kv key put --binding=TRIPS --local "trip:a8k3m2q9" --path /tmp/trip.json
+
+# 3. Visit the trip
+open http://localhost:4321/trip/a8k3m2q9
+# Enter PIN: 1234
+```
+
+To generate a PIN hash for a new trip:
+
+```bash
+bun scripts/hash-pin.ts <pin> <salt>
+# Example: bun scripts/hash-pin.ts mysecretpin abc123salt456
+```
+
+## Build & Deploy
+
+```bash
+# Build
+bun run build
+
+# Deploy to Cloudflare Workers
+wrangler deploy
+
+# Set secrets (one-time)
+wrangler secret put ADMIN_API_TOKEN
+wrangler secret put COOKIE_SIGNING_SECRET
+```
+
+## Admin API
+
+All admin endpoints require `Authorization: Bearer <ADMIN_API_TOKEN>`.
+
+### GET trip
+
+```bash
+curl -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+  https://waymark.<subdomain>.workers.dev/api/admin/trips/a8k3m2q9
+```
+
+Returns the full itinerary JSON document.
+
+### Upsert trip
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/trip.json \
+  https://waymark.<subdomain>.workers.dev/api/admin/trips/upsert
+```
+
+Returns: `{ "ok": true, "id": "a8k3m2q9", "updatedAt": "..." }`
+
+### Delete trip
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"a8k3m2q9"}' \
+  https://waymark.<subdomain>.workers.dev/api/admin/trips/delete
+```
+
+Returns: `{ "ok": true, "deleted": true }`
+
+## Traveler Access
+
+### Verify PIN
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"id":"a8k3m2q9","pin":"1234"}' \
+  https://waymark.<subdomain>.workers.dev/api/trip-access/verify
+```
+
+Returns: `{ "ok": true }` with a `Set-Cookie` header on success, or `{ "error": "Invalid PIN" }` on failure.
+
+## Data Model
+
+One KV document per trip, stored under `trip:{id}`.
+
+The full schema is defined in `src/types/itinerary.ts`. Key fields:
+
+- `id` — 8-character alphanumeric slug (e.g. `a8k3m2q9`)
+- `days[]` — array of day objects, each with `items[]`
+- `items[].type` — `hotel | transport | activity | note | restaurant | transfer`
+- `items[].status` — `booked | quoted | pending | canceled`
+- `pinSalt` + `pinHash` — PBKDF2-SHA256 PIN verification (never expose to clients)
+
+## Security Notes
+
+- PIN hashes use PBKDF2-SHA256 with 100,000 iterations and a random salt
+- Access cookies are HMAC-SHA256 signed, HttpOnly, Secure, SameSite=Lax, expire after 7 days
+- Admin token comparisons use constant-time XOR to prevent timing attacks
+- Trip URLs contain no personal information
+- Admin token is never rendered in public HTML
+
+## Project Structure
+
+```
+src/
+  types/
+    itinerary.ts    # Zod schema + TypeScript types (single source of truth)
+    env.d.ts        # Cloudflare env bindings
+  lib/
+    kv.ts           # KV helpers
+    pin.ts          # PIN hash/verify (PBKDF2)
+    cookie.ts       # Cookie sign/verify (HMAC-SHA256)
+    auth.ts         # Admin bearer token auth
+  pages/
+    trip/[id].astro         # Public trip page (PIN gate + itinerary)
+    api/admin/trips/[id].ts # GET trip (admin)
+    api/admin/trips/upsert.ts  # POST upsert trip (admin)
+    api/admin/trips/delete.ts  # POST delete trip (admin)
+    api/trip-access/verify.ts  # POST verify PIN
+  layouts/
+    TripLayout.astro
+  components/
+    PinGateForm.astro, TripHeader.astro, DayFilter.astro,
+    DaySection.astro, TimelineItem.astro, StatusBadge.astro,
+    TripMap.astro
+scripts/
+  hash-pin.ts    # Generate PBKDF2 PIN hash
+  seed.ts        # Seed sample Amalfi Coast trip
+```
