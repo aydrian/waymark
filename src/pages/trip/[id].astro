@@ -92,7 +92,7 @@ const localDateDisplay = isLive
       />
       <div class="py-4">
         {visibleDays.length === 0 ? (
-          <p class="px-4 py-8 text-center text-sm text-stone-400">
+          <p class="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
             No days to show. <a href={`/trip/${id}`} class="underline">View all days</a>
           </p>
         ) : (
@@ -115,7 +115,7 @@ const localDateDisplay = isLive
             {prevDayNumber !== undefined ? (
               <a
                 href={`/trip/${id}?day=${prevDayNumber}`}
-                class="text-stone-500 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded"
+                class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
               >
                 ← Day {prevDayNumber}
               </a>
@@ -125,7 +125,7 @@ const localDateDisplay = isLive
             {nextDayNumber !== undefined ? (
               <a
                 href={`/trip/${id}?day=${nextDayNumber}`}
-                class="text-stone-500 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded"
+                class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
               >
                 Day {nextDayNumber} →
               </a>
