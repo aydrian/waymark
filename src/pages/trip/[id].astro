@@ -30,7 +30,8 @@ if (rawCookie) {
 
 // 3. Day filter from query param
 const dayParam = Astro.url.searchParams.get('day');
-const activeDay = dayParam ? parseInt(dayParam, 10) : null;
+const parsedDay = dayParam ? parseInt(dayParam, 10) : NaN;
+const activeDay = isNaN(parsedDay) ? null : parsedDay;
 const visibleDays = activeDay
   ? trip.days.filter(d => d.dayNumber === activeDay)
   : trip.days;
