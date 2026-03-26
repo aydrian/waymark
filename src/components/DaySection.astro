@@ -1,8 +1,13 @@
 ---
 import type { Day } from '../types/itinerary';
 import TimelineItem from './TimelineItem.astro';
-interface Props { day: Day }
-const { day } = Astro.props;
+import CurrentDayBadge from './CurrentDayBadge.astro';
+
+interface Props {
+  day: Day;
+  isToday?: boolean;
+}
+const { day, isToday = false } = Astro.props;
 
 const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {
   weekday: 'short', month: 'short', day: 'numeric',
@@ -10,9 +15,10 @@ const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US'
 ---
 <section class="mb-6">
   <div class="px-4 py-3 sm:px-6">
-    <div class="flex items-baseline gap-2">
+    <div class="flex items-baseline gap-2 flex-wrap">
       <span class="text-xs font-bold uppercase tracking-widest text-stone-400">Day {day.dayNumber}</span>
       <span class="text-xs text-stone-400">{fmt(day.date)}</span>
+      {isToday && <CurrentDayBadge />}
     </div>
     <h2 class="text-base font-semibold text-stone-900 mt-0.5">{day.title}</h2>
     {day.notes && (
