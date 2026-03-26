@@ -65,12 +65,13 @@ export function getVisibleDays(
   if (!dayParam) return { days: trip.days, filter: 'all' };
 
   if (dayParam === 'today') {
-    const currentDay = isLiveTrip(trip, now) ? getCurrentDay(trip, now) : undefined;
+    if (!isLiveTrip(trip, now)) return { days: trip.days, filter: 'all' };
+    const currentDay = getCurrentDay(trip, now);
     if (!currentDay) return { days: trip.days, filter: 'all' };
     return { days: [currentDay], filter: 'today' };
   }
 
-  const n = parseInt(dayParam, 10);
+  const n = Number(dayParam);
   if (isNaN(n)) return { days: trip.days, filter: 'all' };
 
   const matched = trip.days.filter(d => d.dayNumber === n);

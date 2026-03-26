@@ -264,6 +264,12 @@ describe('getVisibleDays', () => {
     expect(filter).toBe('all');
   });
 
+  it('leading-numeric string "3abc" → all days, filter "all"', () => {
+    const { days, filter } = getVisibleDays(trip, '3abc', NOW_DAY4);
+    expect(days).toHaveLength(7);
+    expect(filter).toBe('all');
+  });
+
   it('timezone boundary: late UTC resolves to next local day', () => {
     // 2026-03-25T23:30Z → Europe/Rome (UTC+1) = 2026-03-26 00:30 → Day 5
     const lateUtc = new Date('2026-03-25T23:30:00Z');
