@@ -22,7 +22,7 @@ const rawCookie = cookies[cookieName()];
 let authorized = false;
 if (rawCookie) {
   const tripId = await verifyTripCookie(
-    decodeURIComponent(rawCookie),
+    rawCookie,
     Astro.locals.runtime.env.COOKIE_SIGNING_SECRET,
   );
   authorized = tripId === id;
