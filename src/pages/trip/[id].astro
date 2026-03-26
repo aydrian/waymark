@@ -5,13 +5,14 @@ import DayFilter from '../../components/DayFilter.astro';
 import DaySection from '../../components/DaySection.astro';
 import TripMap from '../../components/TripMap.astro';
 import PinGateForm from '../../components/PinGateForm.astro';
+import { env } from 'cloudflare:workers';
 import { getTrip } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
 
 const { id } = Astro.params as { id: string };
 
 // 1. Load trip
-const trip = await getTrip(Astro.locals.runtime.env.TRIPS, id);
+const trip = await getTrip(env.TRIPS, id);
 if (!trip) {
   return new Response(null, { status: 404 });
 }
@@ -23,7 +24,7 @@ let authorized = false;
 if (rawCookie) {
   const tripId = await verifyTripCookie(
     rawCookie,
-    Astro.locals.runtime.env.COOKIE_SIGNING_SECRET,
+    env.COOKIE_SIGNING_SECRET,
   );
   authorized = tripId === id;
 }

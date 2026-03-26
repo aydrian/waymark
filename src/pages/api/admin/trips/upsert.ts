@@ -1,10 +1,11 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { requireAdminAuth } from '../../../../lib/auth';
 import { putTrip } from '../../../../lib/kv';
 import { ItinerarySchema } from '../../../../types/itinerary';
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const authError = requireAdminAuth(request, locals.runtime.env.ADMIN_API_TOKEN);
+export const POST: APIRoute = async ({ request }) => {
+  const authError = requireAdminAuth(request, env.ADMIN_API_TOKEN);
   if (authError) return authError;
 
   let body: unknown;
@@ -25,7 +26,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  await putTrip(locals.runtime.env.TRIPS, result.data);
+  await putTrip(env.TRIPS, result.data);
 
   return new Response(JSON.stringify({ ok: true, id: result.data.id, updatedAt: result.data.updatedAt }), {
     status: 201,

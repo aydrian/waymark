@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { getTrip } from '../../../lib/kv';
 import { verifyPin } from '../../../lib/pin';
 import { signTripCookie, buildSetCookieHeader } from '../../../lib/cookie';
@@ -13,7 +14,7 @@ const BodySchema = z.object({
   pin: z.string().min(1).max(20),
 });
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   let body: unknown;
   try {
     body = await request.json();
@@ -33,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const { id, pin } = result.data;
-  const trip = await getTrip(locals.runtime.env.TRIPS, id);
+  const trip = await getTrip(env.TRIPS, id);
   if (!trip) {
     // Run dummy verifyPin to match timing of the successful-lookup path
     await verifyPin(pin, SENTINEL_SALT, SENTINEL_HASH);
@@ -51,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const cookieValue = await signTripCookie(id, locals.runtime.env.COOKIE_SIGNING_SECRET);
+  const cookieValue = await signTripCookie(id, env.COOKIE_SIGNING_SECRET);
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,

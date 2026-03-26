@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { requireAdminAuth } from '../../../../lib/auth';
 import { getTrip } from '../../../../lib/kv';
 
-export const GET: APIRoute = async ({ params, request, locals }) => {
-  const authError = requireAdminAuth(request, locals.runtime.env.ADMIN_API_TOKEN);
+export const GET: APIRoute = async ({ params, request }) => {
+  const authError = requireAdminAuth(request, env.ADMIN_API_TOKEN);
   if (authError) return authError;
 
   const id = params.id;
@@ -14,7 +15,7 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  const trip = await getTrip(locals.runtime.env.TRIPS, id);
+  const trip = await getTrip(env.TRIPS, id);
   if (!trip) {
     return new Response(JSON.stringify({ error: 'Trip not found' }), {
       status: 404,
