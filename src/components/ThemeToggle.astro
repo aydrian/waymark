@@ -1,0 +1,140 @@
+---
+import { Sun, Moon, Monitor } from 'lucide-astro';
+---
+
+<div id="theme-wrapper" class="fixed bottom-6 right-6 z-50">
+  <!-- Popover -->
+  <div
+    id="theme-popover"
+    role="menu"
+    aria-label="Theme options"
+    class="hidden absolute bottom-14 right-0 w-36 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg overflow-hidden"
+  >
+    <button
+      role="menuitem"
+      data-theme="system"
+      class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+    >
+      <Monitor size={15} aria-hidden="true" />
+      System
+    </button>
+    <button
+      role="menuitem"
+      data-theme="light"
+      class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+    >
+      <Sun size={15} aria-hidden="true" />
+      Light
+    </button>
+    <button
+      role="menuitem"
+      data-theme="dark"
+      class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+    >
+      <Moon size={15} aria-hidden="true" />
+      Dark
+    </button>
+  </div>
+
+  <!-- Toggle button -->
+  <button
+    id="theme-btn"
+    aria-label="Change theme"
+    aria-haspopup="true"
+    aria-expanded="false"
+    aria-controls="theme-popover"
+    class="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] shadow-md hover:bg-[var(--color-bg-subtle)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+  >
+    <span id="icon-system" class="hidden"><Monitor size={18} aria-hidden="true" /></span>
+    <span id="icon-light"  class="hidden"><Sun    size={18} aria-hidden="true" /></span>
+    <span id="icon-dark"   class="hidden"><Moon   size={18} aria-hidden="true" /></span>
+  </button>
+</div>
+
+<script>
+  const STORAGE_KEY = 'waymark-theme';
+  type Theme = 'system' | 'light' | 'dark';
+
+  function getStored(): Theme {
+    const v = localStorage.getItem(STORAGE_KEY);
+    if (v === 'light' || v === 'dark' || v === 'system') return v;
+    return 'system';
+  }
+
+  function prefersDark(): boolean {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  function applyTheme(theme: Theme) {
+    const isDark = theme === 'dark' || (theme === 'system' && prefersDark());
+    document.documentElement.classList.toggle('dark', isDark);
+  }
+
+  function showIcon(theme: Theme) {
+    ['system', 'light', 'dark'].forEach(t => {
+      const el = document.getElementById(`icon-${t}`);
+      if (el) el.classList.toggle('hidden', t !== theme);
+    });
+  }
+
+  function highlightActive(theme: Theme) {
+    // Use inline styles to avoid Tailwind purging dynamically-added arbitrary classes
+    document.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach(btn => {
+      const isActive = btn.dataset.theme === theme;
+      btn.style.fontWeight = isActive ? '600' : '';
+      btn.style.color = isActive ? 'var(--color-text-primary)' : '';
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  let current = getStored();
+  showIcon(current);
+  highlightActive(current);
+
+  // ── System preference listener ────────────────────────────────
+  let mql: MediaQueryList | null = null;
+  function onSystemChange() { applyTheme('system'); }
+
+  function updateSystemListener(theme: Theme) {
+    if (!mql) mql = window.matchMedia('(prefers-color-scheme: dark)');
+    if (theme === 'system') {
+      mql.addEventListener('change', onSystemChange);
+    } else {
+      mql.removeEventListener('change', onSystemChange);
+    }
+  }
+  updateSystemListener(current);
+
+  // ── Popover toggle ────────────────────────────────────────────
+  const btn = document.getElementById('theme-btn')!;
+  const popover = document.getElementById('theme-popover')!;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = popover.classList.toggle('hidden') === false;
+    btn.setAttribute('aria-expanded', String(open));
+  });
+
+  document.addEventListener('click', () => {
+    if (!popover.classList.contains('hidden')) {
+      popover.classList.add('hidden');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // ── Option selection ──────────────────────────────────────────
+  popover.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach(optBtn => {
+    optBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const theme = optBtn.dataset.theme as Theme;
+      localStorage.setItem(STORAGE_KEY, theme);
+      current = theme;
+      applyTheme(theme);
+      showIcon(theme);
+      highlightActive(theme);
+      updateSystemListener(theme);
+      popover.classList.add('hidden');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  });
+</script>
