@@ -102,6 +102,18 @@ describe('getTripStatus', () => {
   it('returns "completed" after endDate', () => {
     expect(getTripStatus(trip, NOW_AFTER)).toBe('completed');
   });
+
+  it('uses trip timezone — UTC day before startDate but local day = startDate → "live"', () => {
+    // 2026-03-21T23:30:00Z → Europe/Rome (UTC+1) = 2026-03-22T00:30 → "2026-03-22" = startDate
+    const crossMidnightStart = new Date('2026-03-21T23:30:00Z');
+    expect(getTripStatus(trip, crossMidnightStart)).toBe('live');
+  });
+
+  it('uses trip timezone — UTC = endDate but local day = endDate+1 → "completed"', () => {
+    // 2026-03-28T23:30:00Z → Europe/Rome (UTC+1) = 2026-03-29T00:30 → "2026-03-29" (after endDate)
+    const crossMidnightEnd = new Date('2026-03-28T23:30:00Z');
+    expect(getTripStatus(trip, crossMidnightEnd)).toBe('completed');
+  });
 });
 
 // ---------------------------------------------------------------------------
