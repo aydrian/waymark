@@ -1,0 +1,21 @@
+---
+import type { TripItem } from '../types/itinerary';
+interface Props {
+  items: TripItem[];
+  centerLat?: number;
+  centerLng?: number;
+}
+const { items } = Astro.props;
+const coordItems = items.filter(i => i.lat !== undefined && i.lng !== undefined);
+---
+{coordItems.length > 0 && (
+  <div class="px-4 pt-4 sm:px-6">
+    <div class="rounded-xl bg-stone-100 border border-stone-200 h-48 flex items-center justify-center">
+      <div class="text-center">
+        <p class="text-sm font-medium text-stone-500">Map</p>
+        <p class="text-xs text-stone-400 mt-1">{coordItems.length} location{coordItems.length !== 1 ? 's' : ''}</p>
+        <p class="text-xs text-stone-300 mt-1">(map integration placeholder)</p>
+      </div>
+    </div>
+  </div>
+)}

@@ -1,0 +1,26 @@
+---
+interface Props { totalDays: number; activeDay: number | null; tripId: string }
+const { totalDays, activeDay, tripId } = Astro.props;
+---
+<nav class="sticky top-0 z-10 bg-white border-b border-stone-200 overflow-x-auto">
+  <div class="flex gap-1 px-4 py-2 min-w-max">
+    <a
+      href={`/trip/${tripId}`}
+      class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+        activeDay === null
+          ? 'bg-stone-900 text-white'
+          : 'text-stone-600 hover:bg-stone-100'
+      }`}
+    >All days</a>
+    {Array.from({ length: totalDays }, (_, i) => i + 1).map(n => (
+      <a
+        href={`/trip/${tripId}?day=${n}`}
+        class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+          activeDay === n
+            ? 'bg-stone-900 text-white'
+            : 'text-stone-600 hover:bg-stone-100'
+        }`}
+      >Day {n}</a>
+    ))}
+  </div>
+</nav>

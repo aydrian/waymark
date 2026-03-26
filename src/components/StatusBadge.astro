@@ -1,0 +1,18 @@
+---
+import type { ItemStatus } from '../types/itinerary';
+interface Props { status: ItemStatus }
+const { status } = Astro.props;
+
+const styles: Record<ItemStatus, string> = {
+  booked:   'bg-emerald-100 text-emerald-800 border border-emerald-200',
+  quoted:   'bg-amber-100  text-amber-800  border border-amber-200',
+  pending:  'bg-sky-100    text-sky-800    border border-sky-200',
+  canceled: 'bg-red-100    text-red-700    border border-red-200',
+};
+const labels: Record<ItemStatus, string> = {
+  booked: 'Booked', quoted: 'Quoted', pending: 'Pending', canceled: 'Canceled',
+};
+---
+<span class={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
+  {labels[status]}
+</span>
