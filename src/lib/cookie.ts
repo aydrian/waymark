@@ -33,9 +33,12 @@ export async function verifyTripCookie(
   cookieValue: string,
   secret: string,
 ): Promise<string | null> {
-  const parts = cookieValue.split(':');
-  if (parts.length !== 3) return null;
-  const [tripId, expiryStr, sig] = parts;
+  const firstColon = cookieValue.indexOf(':');
+  const secondColon = cookieValue.indexOf(':', firstColon + 1);
+  if (firstColon === -1 || secondColon === -1) return null;
+  const tripId = cookieValue.slice(0, firstColon);
+  const expiryStr = cookieValue.slice(firstColon + 1, secondColon);
+  const sig = cookieValue.slice(secondColon + 1);
   const expiry = parseInt(expiryStr, 10);
   if (isNaN(expiry) || Date.now() > expiry) return null;
   const payload = `${tripId}:${expiryStr}`;
@@ -58,7 +61,14 @@ export function cookieName(): string {
 export function parseCookies(header: string | null): Record<string, string> {
   if (!header) return {};
   return Object.fromEntries(
-    header.split(';').map(c => c.trim().split('=').map(decodeURIComponent) as [string, string]),
+    header.split(';').map(c => {
+      const idx = c.indexOf('=');
+      if (idx === -1) return [decodeURIComponent(c.trim()), ''] as [string, string];
+      return [
+        decodeURIComponent(c.slice(0, idx).trim()),
+        decodeURIComponent(c.slice(idx + 1)),
+      ] as [string, string];
+    }),
   );
 }
 

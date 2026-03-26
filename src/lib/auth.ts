@@ -7,10 +7,11 @@ export function getBearerToken(request: Request): string | null {
 
 /** Constant-time string comparison */
 function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  // Always iterate full length of `a` to avoid leaking length of `b`
+  const len = a.length;
+  let diff = a.length ^ b.length; // non-zero if different lengths
+  for (let i = 0; i < len; i++) {
+    diff |= a.charCodeAt(i) ^ (b.charCodeAt(i) ?? 0);
   }
   return diff === 0;
 }

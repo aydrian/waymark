@@ -6,7 +6,10 @@ export async function getTrip(kv: KVNamespace, id: string): Promise<Itinerary | 
   const raw = await kv.get(key(id), 'text');
   if (!raw) return null;
   const parsed = ItinerarySchema.safeParse(JSON.parse(raw));
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    console.error(`[kv] Schema parse failed for trip:${id}`, parsed.error.issues);
+    return null;
+  }
   return parsed.data;
 }
 
