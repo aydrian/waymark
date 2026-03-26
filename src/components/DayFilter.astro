@@ -1,28 +1,65 @@
 ---
-interface Props { totalDays: number; activeDay: number | null; tripId: string }
-const { totalDays, activeDay, tripId } = Astro.props;
+import type { Day } from '../types/itinerary';
+
+interface Props {
+  days: Day[];
+  activeFilter: 'all' | 'today' | number;
+  tripId: string;
+  isLive: boolean;
+  currentDayNumber?: number;
+}
+const { days, activeFilter, tripId, isLive, currentDayNumber } = Astro.props;
 ---
 <nav aria-label="Day filter" class="sticky top-0 z-10 bg-white border-b border-stone-200 overflow-x-auto">
   <div class="flex gap-1 px-4 py-2 min-w-max">
+
+    {/* All days */}
     <a
       href={`/trip/${tripId}`}
-      aria-current={activeDay === null ? "page" : undefined}
-      class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-        activeDay === null
+      aria-current={activeFilter === 'all' ? 'page' : undefined}
+      class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 ${
+        activeFilter === 'all'
           ? 'bg-stone-900 text-white'
           : 'text-stone-600 hover:bg-stone-100'
       }`}
     >All days</a>
-    {Array.from({ length: totalDays }, (_, i) => i + 1).map(n => (
+
+    {/* Today button — only when live and current day exists (Rule C) */}
+    {isLive && currentDayNumber !== undefined && (
       <a
-        href={`/trip/${tripId}?day=${n}`}
-        aria-current={activeDay === n ? "page" : undefined}
-        class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-          activeDay === n
+        href={`/trip/${tripId}?day=today`}
+        aria-current={activeFilter === 'today' ? 'page' : undefined}
+        class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+          activeFilter === 'today'
+            ? 'bg-emerald-700 text-white'
+            : 'text-emerald-700 border border-emerald-300 hover:bg-emerald-50'
+        }`}
+      >Today</a>
+    )}
+
+    {/* Day N buttons */}
+    {days.map(day => (
+      <a
+        href={`/trip/${tripId}?day=${day.dayNumber}`}
+        aria-current={activeFilter === day.dayNumber ? 'page' : undefined}
+        class={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 ${
+          activeFilter === day.dayNumber
             ? 'bg-stone-900 text-white'
             : 'text-stone-600 hover:bg-stone-100'
         }`}
-      >Day {n}</a>
+      >
+        Day {day.dayNumber}
+        {/* Today indicator dot — Rule F */}
+        {day.dayNumber === currentDayNumber && (
+          <span
+            aria-label="today"
+            class={`inline-block w-1.5 h-1.5 rounded-full ${
+              activeFilter === day.dayNumber ? 'bg-emerald-400' : 'bg-emerald-500'
+            }`}
+          />
+        )}
+      </a>
     ))}
+
   </div>
 </nav>
