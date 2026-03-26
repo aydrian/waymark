@@ -1,1 +1,130 @@
 @import "tailwindcss";
+
+/* ─── Color tokens ─────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-bg-subtle: #f5f4f0;
+
+  /* Borders */
+  --color-border: #e7e5e4;
+  --color-border-subtle: #f5f4f0;
+
+  /* Text */
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #78716c;
+  --color-text-muted: #a8a29e;
+
+  /* Interactive */
+  --color-btn-active-bg: #1c1917;
+  --color-btn-active-text: #ffffff;
+  --color-btn-primary-hover: #44403c;
+  --color-focus-ring: #a8a29e;
+
+  /* Notes / warnings (amber) */
+  --color-note-bg: #fffbeb;
+  --color-note-border: #fde68a;
+  --color-note-label: #b45309;
+  --color-note-text: #78350f;
+  --color-note-badge-bg: #fde68a;
+  --color-note-badge-text: #92400e;
+  --color-note-link: #b45309;
+  --color-note-link-hover: #78350f;
+
+  /* Today / emerald accent */
+  --color-today-text: #15803d;
+  --color-today-border: #86efac;
+  --color-today-hover-bg: #f0fdf4;
+  --color-today-active-bg: #15803d;
+  --color-today-dot: #22c55e;
+
+  /* Status: Booked (emerald) */
+  --color-status-booked-bg: #d1fae5;
+  --color-status-booked-text: #065f46;
+  --color-status-booked-border: #a7f3d0;
+
+  /* Status: Quoted (amber) */
+  --color-status-quoted-bg: #fef3c7;
+  --color-status-quoted-text: #92400e;
+  --color-status-quoted-border: #fde68a;
+
+  /* Status: Pending (sky) */
+  --color-status-pending-bg: #e0f2fe;
+  --color-status-pending-text: #075985;
+  --color-status-pending-border: #bae6fd;
+
+  /* Status: Canceled (red) */
+  --color-status-canceled-bg: #fee2e2;
+  --color-status-canceled-text: #b91c1c;
+  --color-status-canceled-border: #fecaca;
+
+  /* Error (red) */
+  --color-error-bg: #fee2e2;
+  --color-error-border: #fecaca;
+  --color-error-text: #b91c1c;
+}
+
+html.dark {
+  /* Backgrounds */
+  --color-bg: #0c0a09;
+  --color-surface: #1c1917;
+  --color-bg-subtle: #292524;
+
+  /* Borders */
+  --color-border: #292524;
+  --color-border-subtle: #292524;
+
+  /* Text */
+  --color-text-primary: #fafaf9;
+  --color-text-secondary: #a8a29e;
+  --color-text-muted: #78716c;
+
+  /* Interactive */
+  --color-btn-active-bg: #fafaf9;
+  --color-btn-active-text: #1c1917;
+  --color-btn-primary-hover: #292524;
+  --color-focus-ring: #78716c;
+
+  /* Notes / warnings (amber) */
+  --color-note-bg: #1c1200;
+  --color-note-border: #78350f;
+  --color-note-label: #fcd34d;
+  --color-note-text: #fef3c7;
+  --color-note-badge-bg: #78350f;
+  --color-note-badge-text: #fcd34d;
+  --color-note-link: #fcd34d;
+  --color-note-link-hover: #fef3c7;
+
+  /* Today / emerald accent */
+  --color-today-text: #4ade80;
+  --color-today-border: #166534;
+  --color-today-hover-bg: #052e16;
+  --color-today-active-bg: #16a34a;
+  --color-today-dot: #4ade80;
+
+  /* Status: Booked */
+  --color-status-booked-bg: #064e3b;
+  --color-status-booked-text: #6ee7b7;
+  --color-status-booked-border: #065f46;
+
+  /* Status: Quoted */
+  --color-status-quoted-bg: #78350f;
+  --color-status-quoted-text: #fcd34d;
+  --color-status-quoted-border: #92400e;
+
+  /* Status: Pending */
+  --color-status-pending-bg: #0c4a6e;
+  --color-status-pending-text: #7dd3fc;
+  --color-status-pending-border: #075985;
+
+  /* Status: Canceled */
+  --color-status-canceled-bg: #7f1d1d;
+  --color-status-canceled-text: #fca5a5;
+  --color-status-canceled-border: #991b1b;
+
+  /* Error */
+  --color-error-bg: #450a0a;
+  --color-error-border: #7f1d1d;
+  --color-error-text: #fca5a5;
+}
