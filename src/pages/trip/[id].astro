@@ -5,9 +5,17 @@ import DayFilter from '../../components/DayFilter.astro';
 import DaySection from '../../components/DaySection.astro';
 import TripMap from '../../components/TripMap.astro';
 import PinGateForm from '../../components/PinGateForm.astro';
+import LiveTripBanner from '../../components/LiveTripBanner.astro';
 import { env } from 'cloudflare:workers';
 import { getTrip } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
+import {
+  getTripStatus,
+  getCurrentDay,
+  getCurrentDayNumber,
+  isLiveTrip,
+  getVisibleDays,
+} from '../../lib/trip-state';
 
 const { id } = Astro.params as { id: string };
 
@@ -22,46 +30,111 @@ const cookies = parseCookies(Astro.request.headers.get('Cookie'));
 const rawCookie = cookies[cookieName()];
 let authorized = false;
 if (rawCookie) {
-  const tripId = await verifyTripCookie(
-    rawCookie,
-    env.COOKIE_SIGNING_SECRET,
-  );
+  const tripId = await verifyTripCookie(rawCookie, env.COOKIE_SIGNING_SECRET);
   authorized = tripId === id;
 }
 
-// 3. Day filter from query param
+// 3. Compute trip state
+const now = new Date();
 const dayParam = Astro.url.searchParams.get('day');
-const parsedDay = dayParam ? parseInt(dayParam, 10) : NaN;
-const activeDay = isNaN(parsedDay) ? null : parsedDay;
-const visibleDays = activeDay
-  ? trip.days.filter(d => d.dayNumber === activeDay)
-  : trip.days;
+const { days: visibleDays, filter: activeFilter } = getVisibleDays(trip, dayParam, now);
+const tripStatus = getTripStatus(trip, now);
+const isLive = tripStatus === 'live';
+const currentDay = getCurrentDay(trip, now);
+const currentDayNumber = currentDay?.dayNumber;
 
-// 4. Collect items for map — scoped to the active day filter if set
+// 4. Map items scoped to visible days
 const mapItems = visibleDays.flatMap(d => d.items);
+
+// 5. Prev/next day links (only when viewing a single numeric day)
+const singleDay = typeof activeFilter === 'number' ? activeFilter : null;
+const prevDayNumber = singleDay !== null
+  ? trip.days.find(d => d.dayNumber === singleDay - 1)?.dayNumber
+  : undefined;
+const nextDayNumber = singleDay !== null
+  ? trip.days.find(d => d.dayNumber === singleDay + 1)?.dayNumber
+  : undefined;
+
+// 6. Formatted local date for live banner (e.g. "Wed, Mar 25")
+const localDateDisplay = isLive
+  ? new Intl.DateTimeFormat('en-US', {
+      timeZone: trip.timezone,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }).format(now)
+  : '';
 ---
 <TripLayout title={trip.title}>
   {!authorized ? (
     <PinGateForm tripId={id} />
   ) : (
     <main>
+      {isLive && currentDayNumber !== undefined && (
+        <LiveTripBanner
+          currentDayNumber={currentDayNumber}
+          totalDays={trip.days.length}
+          localDate={localDateDisplay}
+          tripId={id}
+        />
+      )}
       <TripHeader trip={trip} />
       <TripMap
         items={mapItems}
-        centerLat={activeDay === null ? trip.map?.centerLat : undefined}
-        centerLng={activeDay === null ? trip.map?.centerLng : undefined}
-        zoom={activeDay === null ? trip.map?.zoom : undefined}
+        centerLat={activeFilter === 'all' ? trip.map?.centerLat : undefined}
+        centerLng={activeFilter === 'all' ? trip.map?.centerLng : undefined}
+        zoom={activeFilter === 'all' ? trip.map?.zoom : undefined}
       />
-      <DayFilter totalDays={trip.days.length} activeDay={activeDay} tripId={id} />
+      <DayFilter
+        days={trip.days}
+        activeFilter={activeFilter}
+        tripId={id}
+        isLive={isLive}
+        currentDayNumber={currentDayNumber}
+      />
       <div class="py-4">
         {visibleDays.length === 0 ? (
           <p class="px-4 py-8 text-center text-sm text-stone-400">
-            Day {activeDay} not found.
+            No days to show. <a href={`/trip/${id}`} class="underline">View all days</a>
           </p>
         ) : (
-          visibleDays.map(day => <DaySection day={day} />)
+          visibleDays.map(day => (
+            <DaySection
+              day={day}
+              isToday={day.dayNumber === currentDayNumber}
+            />
+          ))
         )}
       </div>
+
+      {/* Prev/next navigation — only when viewing a single numeric day */}
+      {singleDay !== null && (prevDayNumber !== undefined || nextDayNumber !== undefined) && (
+        <nav
+          aria-label="Day navigation"
+          class="flex items-center justify-between px-4 pb-8 pt-2 text-sm sm:px-6"
+        >
+          <div>
+            {prevDayNumber !== undefined ? (
+              <a
+                href={`/trip/${id}?day=${prevDayNumber}`}
+                class="text-stone-500 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded"
+              >
+                ← Day {prevDayNumber}
+              </a>
+            ) : <span />}
+          </div>
+          <div>
+            {nextDayNumber !== undefined ? (
+              <a
+                href={`/trip/${id}?day=${nextDayNumber}`}
+                class="text-stone-500 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 rounded"
+              >
+                Day {nextDayNumber} →
+              </a>
+            ) : <span />}
+          </div>
+        </nav>
+      )}
     </main>
   )}
 </TripLayout>
