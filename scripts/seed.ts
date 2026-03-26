@@ -1,17 +1,23 @@
 /**
- * Seed the sample itinerary into KV for local dev.
+ * Seed sample itineraries into KV for local dev.
  *
- * Usage:
- *   # Generate output and pipe to wrangler
+ * Usage (live trip, primary):
  *   bun scripts/seed.ts > /tmp/trip.json
  *   wrangler kv key put --binding=TRIPS --local "trip:a8k3m2q9" --path /tmp/trip.json
+ *
+ * Usage (upcoming trip, secondary):
+ *   bun scripts/seed.ts upcoming > /tmp/upcoming.json
+ *   wrangler kv key put --binding=TRIPS --local "trip:z9x7v5t3" --path /tmp/upcoming.json
+ *
+ * PIN for both trips: use the verify endpoint at /api/trip-access/verify
  */
 
-const SAMPLE_TRIP = {
+const LIVE_TRIP = {
   id: "a8k3m2q9",
   title: "Amalfi Coast & Rome",
-  startDate: "2026-06-01",
-  endDate: "2026-06-07",
+  startDate: "2026-03-22",
+  endDate: "2026-03-28",
+  timezone: "Europe/Rome",
   summary: "A week exploring the Amalfi Coast and ending in Rome. Private transfers, boutique hotels, and curated dining experiences.",
   destinations: ["Naples", "Positano", "Ravello", "Rome"],
   pinSalt: "deadbeefcafebabedeadbeefcafebabe",
@@ -21,7 +27,7 @@ const SAMPLE_TRIP = {
   map: { centerLat: 40.628, centerLng: 14.485, zoom: 10 },
   days: [
     {
-      date: "2026-06-01",
+      date: "2026-03-22",
       dayNumber: 1,
       title: "Arrival in Naples → Positano",
       notes: "Flight arrives NCE 11:40. Private transfer meets you at arrivals, sign: WAYMARK.",
@@ -74,7 +80,7 @@ const SAMPLE_TRIP = {
       ]
     },
     {
-      date: "2026-06-02",
+      date: "2026-03-23",
       dayNumber: 2,
       title: "Positano — Leisure Day",
       notes: "No fixed schedule. Beach chairs at Spiaggia Grande are pre-arranged.",
@@ -112,7 +118,7 @@ const SAMPLE_TRIP = {
       ]
     },
     {
-      date: "2026-06-03",
+      date: "2026-03-24",
       dayNumber: 3,
       title: "Ravello Day Trip",
       notes: "Transfer departs hotel at 9:30.",
@@ -157,7 +163,7 @@ const SAMPLE_TRIP = {
       ]
     },
     {
-      date: "2026-06-04",
+      date: "2026-03-25",
       dayNumber: 4,
       title: "Positano → Rome by Train",
       notes: "Pack the night before. Checkout at 11:00.",
@@ -214,7 +220,7 @@ const SAMPLE_TRIP = {
       ]
     },
     {
-      date: "2026-06-05",
+      date: "2026-03-26",
       dayNumber: 5,
       title: "Rome — Vatican & Trastevere",
       items: [
@@ -261,8 +267,152 @@ const SAMPLE_TRIP = {
           notes: "Wine pairing pre-ordered."
         }
       ]
+    },
+    {
+      date: "2026-03-27",
+      dayNumber: 6,
+      title: "Rome — Borghese Gallery & Campo de' Fiori",
+      notes: "Gallery admission is timed entry — do not arrive late.",
+      items: [
+        {
+          id: "d6-borghese",
+          type: "activity",
+          title: "Borghese Gallery — timed entry",
+          status: "booked",
+          startTime: "09:00",
+          endTime: "11:00",
+          location: "Piazzale Scipione Borghese 5, Rome",
+          lat: 41.9142,
+          lng: 12.4921,
+          vendor: "Borghese Gallery",
+          confirmationNumber: "BG-2026-3321",
+          notes: "2-hour slot, no extensions. Bag check required."
+        },
+        {
+          id: "d6-lunch",
+          type: "restaurant",
+          title: "Lunch at Osteria dell'Ingegno",
+          status: "booked",
+          startTime: "13:00",
+          location: "Piazza di Pietra 45, Rome",
+          lat: 41.8993,
+          lng: 12.4797
+        },
+        {
+          id: "d6-pantheon",
+          type: "activity",
+          title: "Pantheon — self-guided visit",
+          status: "booked",
+          startTime: "15:30",
+          location: "Piazza della Rotonda, Rome",
+          lat: 41.8986,
+          lng: 12.4769,
+          notes: "Timed entry ticket included in confirmation email."
+        },
+        {
+          id: "d6-farewell-dinner",
+          type: "restaurant",
+          title: "Farewell dinner at Settembrini",
+          status: "booked",
+          startTime: "20:00",
+          location: "Via Luigi Settembrini 25, Rome",
+          notes: "Chef's tasting menu pre-selected. Notify of any allergies."
+        }
+      ]
+    },
+    {
+      date: "2026-03-28",
+      dayNumber: 7,
+      title: "Departure from Rome",
+      notes: "Checkout at 12:00. Transfer to Fiumicino at 13:30.",
+      items: [
+        {
+          id: "d7-checkout",
+          type: "hotel",
+          title: "Hotel de Russie — Checkout",
+          status: "booked",
+          startTime: "12:00"
+        },
+        {
+          id: "d7-transfer",
+          type: "transfer",
+          title: "Transfer Hotel de Russie → Rome Fiumicino (FCO)",
+          status: "booked",
+          startTime: "13:30",
+          vendor: "Rome Transfers",
+          confirmationNumber: "RT-4491",
+          notes: "Driver: Luigi. Allow 60 min for the drive."
+        },
+        {
+          id: "d7-flight",
+          type: "transport",
+          title: "Flight FCO → NCE",
+          status: "booked",
+          startTime: "17:20",
+          endTime: "18:55",
+          vendor: "ITA Airways",
+          confirmationNumber: "ITA-88822",
+          notes: "Check-in closes 45 min before departure."
+        }
+      ]
     }
   ]
 };
 
-console.log(JSON.stringify(SAMPLE_TRIP, null, 2));
+// A second sample trip in the future — demonstrates 'upcoming' status.
+// Seed command: bun scripts/seed.ts upcoming > /tmp/upcoming.json
+//   wrangler kv key put --binding=TRIPS --local "trip:z9x7v5t3" --path /tmp/upcoming.json
+const UPCOMING_TRIP = {
+  id: "z9x7v5t3",
+  title: "Swiss Alps Weekend",
+  startDate: "2026-06-20",
+  endDate: "2026-06-23",
+  timezone: "Europe/Zurich",
+  summary: "A long weekend hiking and sightseeing in the Swiss Alps.",
+  destinations: ["Zurich", "Zermatt"],
+  pinSalt: "deadbeefcafebabedeadbeefcafebabe",
+  pinHash: "643bf561dd676254c08d60701376ce3e9e638b80210a3f1c3ae0cee0c0ca0ccd",
+  updatedAt: "2026-03-25T12:00:00Z",
+  days: [
+    {
+      date: "2026-06-20",
+      dayNumber: 1,
+      title: "Arrival in Zurich",
+      items: [
+        { id: "s1-flight", type: "transport", title: "Flight to ZRH", status: "booked", startTime: "10:00", endTime: "12:15", vendor: "Swiss Air", confirmationNumber: "LX-4421" }
+      ]
+    },
+    {
+      date: "2026-06-21",
+      dayNumber: 2,
+      title: "Glacier Express to Zermatt",
+      items: [
+        { id: "s2-train", type: "transport", title: "Glacier Express ZRH → Zermatt", status: "booked", startTime: "09:02", endTime: "15:30", vendor: "SBB", confirmationNumber: "GE-2026-77" }
+      ]
+    },
+    {
+      date: "2026-06-22",
+      dayNumber: 3,
+      title: "Klein Matterhorn",
+      items: [
+        { id: "s3-gondola", type: "activity", title: "Klein Matterhorn Gondola", status: "quoted", startTime: "10:00", vendor: "Zermatt Bergbahnen", notes: "Weather-dependent. Backup: Gorner Gorge walk." }
+      ]
+    },
+    {
+      date: "2026-06-23",
+      dayNumber: 4,
+      title: "Return to Zurich",
+      items: [
+        { id: "s4-train", type: "transport", title: "Train Zermatt → ZRH Airport", status: "booked", startTime: "11:00", vendor: "SBB" },
+        { id: "s4-flight", type: "transport", title: "Flight ZRH → Home", status: "booked", startTime: "18:45", vendor: "Swiss Air" }
+      ]
+    }
+  ]
+};
+
+const target = process.argv[2];
+if (target === 'upcoming') {
+  console.log(JSON.stringify(UPCOMING_TRIP, null, 2));
+} else {
+  console.log(JSON.stringify(LIVE_TRIP, null, 2));
+}
