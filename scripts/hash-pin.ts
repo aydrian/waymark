@@ -4,10 +4,12 @@
  * Use the output as pinHash in your itinerary JSON.
  */
 
-const [, , pin, salt] = process.argv;
+export {};
+
+const [, , pin, salt] = Bun.argv;
 if (!pin || !salt) {
   console.error('Usage: bun scripts/hash-pin.ts <pin> <salt>');
-  process.exit(1);
+  Bun.exit(1);
 }
 
 const enc = new TextEncoder();
