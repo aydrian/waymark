@@ -59,6 +59,7 @@ const { tripId, error } = Astro.props;
         const errEl = document.querySelector('[data-error]') ?? (() => {
           const d = document.createElement('p');
           d.setAttribute('data-error', '');
+          d.setAttribute('role', 'alert');
           d.className = 'text-sm text-red-600 text-center';
           document.getElementById('pin-form').prepend(d);
           return d;
@@ -68,6 +69,15 @@ const { tripId, error } = Astro.props;
     } catch {
       btn.disabled = false;
       btn.textContent = 'Unlock Itinerary';
+      const errEl = document.querySelector('[data-error]') ?? (() => {
+        const d = document.createElement('p');
+        d.setAttribute('data-error', '');
+        d.setAttribute('role', 'alert');
+        d.className = 'text-sm text-red-600 text-center';
+        document.getElementById('pin-form').prepend(d);
+        return d;
+      })();
+      errEl.textContent = 'Something went wrong. Please try again.';
     }
   });
 </script>

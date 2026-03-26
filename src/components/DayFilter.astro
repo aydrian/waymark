@@ -2,10 +2,11 @@
 interface Props { totalDays: number; activeDay: number | null; tripId: string }
 const { totalDays, activeDay, tripId } = Astro.props;
 ---
-<nav class="sticky top-0 z-10 bg-white border-b border-stone-200 overflow-x-auto">
+<nav aria-label="Day filter" class="sticky top-0 z-10 bg-white border-b border-stone-200 overflow-x-auto">
   <div class="flex gap-1 px-4 py-2 min-w-max">
     <a
       href={`/trip/${tripId}`}
+      aria-current={activeDay === null ? "page" : undefined}
       class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
         activeDay === null
           ? 'bg-stone-900 text-white'
@@ -15,6 +16,7 @@ const { totalDays, activeDay, tripId } = Astro.props;
     {Array.from({ length: totalDays }, (_, i) => i + 1).map(n => (
       <a
         href={`/trip/${tripId}?day=${n}`}
+        aria-current={activeDay === n ? "page" : undefined}
         class={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
           activeDay === n
             ? 'bg-stone-900 text-white'
