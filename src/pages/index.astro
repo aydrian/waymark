@@ -1,5 +1,55 @@
 ---
-// Root redirect — update SAMPLE_TRIP_ID after seeding
-const SAMPLE_TRIP_ID = 'a8k3m2q9';
-return Astro.redirect(`/trip/${SAMPLE_TRIP_ID}`, 302);
+import TripLayout from '../layouts/TripLayout.astro';
 ---
+
+<TripLayout title="Home">
+  <main class="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+    <div class="w-full max-w-md text-center space-y-8">
+
+      <!-- Brand -->
+      <div class="space-y-3">
+        <h1 class="text-4xl font-bold tracking-tight" style="color: var(--color-text-primary)">
+          Waymark
+        </h1>
+        <p class="text-base" style="color: var(--color-text-secondary)">
+          Your trip itinerary, beautifully organized.
+        </p>
+      </div>
+
+      <!-- Trip lookup -->
+      <form
+        class="space-y-3"
+        onsubmit="event.preventDefault(); const id = this.tripId.value.trim(); if (id) window.location.href = '/trip/' + id;"
+      >
+        <div class="flex gap-2">
+          <input
+            type="text"
+            name="tripId"
+            placeholder="Enter trip ID"
+            autocomplete="off"
+            spellcheck="false"
+            class="flex-1 px-4 py-2.5 rounded-lg text-sm border transition-colors focus:outline-none"
+            style="
+              background: var(--color-surface);
+              color: var(--color-text-primary);
+              border-color: var(--color-border);
+            "
+          />
+          <button
+            type="submit"
+            class="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style="background: var(--color-btn-active-bg); color: var(--color-btn-active-text);"
+            onmouseover="this.style.background='var(--color-btn-primary-hover)'"
+            onmouseout="this.style.background='var(--color-btn-active-bg)'"
+          >
+            Open
+          </button>
+        </div>
+        <p class="text-xs" style="color: var(--color-text-muted)">
+          Trip links are shared by your travel organizer.
+        </p>
+      </form>
+
+    </div>
+  </main>
+</TripLayout>
