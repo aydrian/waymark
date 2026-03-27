@@ -19,5 +19,11 @@
 			"id": "3ff4e7bde86b4346b0cbe41209b2541a",
 			"preview_id": "71a7b06de58346e4a96477f8deff859c"
 		}
-	]
+	],
+	"secrets": {
+		"required": [
+			"ADMIN_API_TOKEN",
+			"COOKIE_SIGNING_SECRET"
+		]
+	}
 }
