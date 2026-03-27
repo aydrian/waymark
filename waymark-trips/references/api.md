@@ -9,6 +9,24 @@ Base URL: `$WAYMARK_BASE_URL`
 
 ---
 
+## GET /api/admin/trips
+
+List all trips with summary metadata.
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/admin/trips"
+```
+
+**Responses:**
+- `200` — `{"trips":[{"id","title","startDate","endDate","destinations","travelers","updatedAt"}],"count":N}`
+- `401` — missing or invalid token
+
+`travelers` is always an array (empty `[]` if not set on the trip).
+
+---
+
 ## GET /api/admin/trips/:id
 
 Fetch a complete trip by ID.

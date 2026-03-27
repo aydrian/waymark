@@ -39,6 +39,19 @@ grep ADMIN_API_TOKEN .dev.vars 2>/dev/null | cut -d= -f2
 | "update", "edit", "change", "add a day to" | [Update](#update-a-trip) |
 | "delete", "remove" | [Delete](#delete-a-trip) |
 | "fetch", "show me", "get trip", "what's in trip X" | [Fetch](#fetch-a-trip) |
+| "list trips", "show all trips", "what trips exist", "discover trips" | [List](#list-trips) |
+
+---
+
+## List Trips
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/admin/trips"
+```
+
+On 200: display a table of all trips (id, title, dates, destinations, travelers). Use this to discover trip IDs before fetching or updating.
 
 ---
 

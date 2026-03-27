@@ -80,3 +80,13 @@ export type HotelStay = z.infer<typeof HotelStaySchema>;
 export type TripItem = z.infer<typeof TripItemSchema>;
 export type Day = z.infer<typeof DaySchema>;
 export type Itinerary = z.infer<typeof ItinerarySchema>;
+
+export type TripSummary = {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  destinations: string[];
+  travelers: string[];
+  updatedAt: string;
+};

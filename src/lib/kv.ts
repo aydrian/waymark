@@ -1,4 +1,4 @@
-import { ItinerarySchema, type Itinerary } from '../types/itinerary';
+import { ItinerarySchema, type Itinerary, type TripSummary } from '../types/itinerary';
 
 const key = (id: string) => `trip:${id}`;
 
@@ -27,4 +27,22 @@ export async function deleteTrip(kv: KVNamespace, id: string): Promise<boolean> 
   if (!exists) return false;
   await kv.delete(key(id));
   return true;
+}
+
+export async function listTrips(kv: KVNamespace): Promise<TripSummary[]> {
+  const { keys } = await kv.list({ prefix: 'trip:' });
+  const trips = await Promise.all(
+    keys.map(({ name }) => getTrip(kv, name.slice('trip:'.length)))
+  );
+  return trips
+    .filter((t): t is Itinerary => t !== null)
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      startDate: t.startDate,
+      endDate: t.endDate,
+      destinations: t.destinations,
+      travelers: t.travelers ?? [],
+      updatedAt: t.updatedAt,
+    }));
 }
