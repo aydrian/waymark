@@ -62,7 +62,8 @@ const LIVE_TRIP = {
           title: "Le Sirenuse, Positano — Check-in",
           status: "booked",
           startTime: "15:00",
-          location: "Via Cristoforo Colombo 30, Positano",
+          location: "Le Sirenuse",
+          address: "Via Cristoforo Colombo 30, Positano",
           lat: 40.6281,
           lng: 14.4843,
           vendor: "Le Sirenuse",
@@ -75,7 +76,10 @@ const LIVE_TRIP = {
           title: "Dinner at La Sponda",
           status: "booked",
           startTime: "20:00",
-          location: "Le Sirenuse, Positano",
+          location: "Le Sirenuse",
+          address: "Via Cristoforo Colombo 30, Positano",
+          lat: 40.6281,
+          lng: 14.4843,
           notes: "Candlelit terrace. Dress code: smart casual."
         }
       ]
@@ -114,7 +118,10 @@ const LIVE_TRIP = {
           title: "Dinner at Il Tridente",
           status: "booked",
           startTime: "19:30",
-          location: "Via Pasitea 242, Positano"
+          location: "Il Tridente",
+          address: "Via Pasitea 242, Positano",
+          lat: 40.6279,
+          lng: 14.4849
         }
       ]
     },
@@ -150,7 +157,10 @@ const LIVE_TRIP = {
           title: "Lunch at Ristorante Rossellinis",
           status: "booked",
           startTime: "13:00",
-          location: "Via San Giovanni del Toro 28, Ravello"
+          location: "Ristorante Rossellinis",
+          address: "Via San Giovanni del Toro 28, Ravello",
+          lat: 40.6494,
+          lng: 14.6133
         },
         {
           id: "d3-transfer-back",
@@ -202,7 +212,8 @@ const LIVE_TRIP = {
           title: "Hotel de Russie, Rome — Check-in",
           status: "booked",
           startTime: "16:30",
-          location: "Via del Babuino 9, Rome",
+          location: "Hotel de Russie",
+          address: "Via del Babuino 9, Rome",
           lat: 41.9058,
           lng: 12.4781,
           vendor: "Hotel de Russie",
@@ -215,7 +226,10 @@ const LIVE_TRIP = {
           title: "Dinner at Il Sorpasso",
           status: "pending",
           startTime: "20:00",
-          location: "Via Properzio 31/33, Rome",
+          location: "Il Sorpasso",
+          address: "Via Properzio 31/33, Rome",
+          lat: 41.9028,
+          lng: 12.4665,
           notes: "Reservation pending confirmation — check email."
         }
       ]
@@ -245,7 +259,8 @@ const LIVE_TRIP = {
           title: "Lunch — Da Enzo al 29, Trastevere",
           status: "booked",
           startTime: "13:30",
-          location: "Via dei Vascellari 29, Rome",
+          location: "Da Enzo al 29",
+          address: "Via dei Vascellari 29, Rome",
           lat: 41.888,
           lng: 12.469
         },
@@ -264,7 +279,10 @@ const LIVE_TRIP = {
           title: "Dinner at Roscioli",
           status: "booked",
           startTime: "20:30",
-          location: "Via dei Giubbonari 21/22, Rome",
+          location: "Roscioli",
+          address: "Via dei Giubbonari 21/22, Rome",
+          lat: 41.8943,
+          lng: 12.4762,
           notes: "Wine pairing pre-ordered."
         }
       ]
@@ -295,7 +313,8 @@ const LIVE_TRIP = {
           title: "Lunch at Osteria dell'Ingegno",
           status: "booked",
           startTime: "13:00",
-          location: "Piazza di Pietra 45, Rome",
+          location: "Osteria dell'Ingegno",
+          address: "Piazza di Pietra 45, Rome",
           lat: 41.8993,
           lng: 12.4797
         },
@@ -316,7 +335,10 @@ const LIVE_TRIP = {
           title: "Farewell dinner at Settembrini",
           status: "booked",
           startTime: "20:00",
-          location: "Via Luigi Settembrini 25, Rome",
+          location: "Settembrini",
+          address: "Via Luigi Settembrini 25, Rome",
+          lat: 41.9092,
+          lng: 12.4733,
           notes: "Chef's tasting menu pre-selected. Notify of any allergies."
         }
       ]
@@ -388,7 +410,7 @@ const UPCOMING_TRIP = {
       dayNumber: 2,
       title: "Glacier Express to Zermatt",
       items: [
-        { id: "s2-train", type: "transport", title: "Glacier Express ZRH → Zermatt", status: "booked", startTime: "09:02", endTime: "15:30", vendor: "SBB", confirmationNumber: "GE-2026-77" }
+        { id: "s2-train", type: "transport", title: "Glacier Express ZRH → Zermatt", status: "booked", startTime: "09:02", endTime: "15:30", vendor: "SBB", confirmationNumber: "GE-2026-77", location: "Zermatt Bahnhof", address: "Bahnhofplatz, 3920 Zermatt", lat: 46.0207, lng: 7.7491 }
       ]
     },
     {
@@ -396,7 +418,7 @@ const UPCOMING_TRIP = {
       dayNumber: 3,
       title: "Klein Matterhorn",
       items: [
-        { id: "s3-gondola", type: "activity", title: "Klein Matterhorn Gondola", status: "quoted", startTime: "10:00", vendor: "Zermatt Bergbahnen", notes: "Weather-dependent. Backup: Gorner Gorge walk." }
+        { id: "s3-gondola", type: "activity", title: "Klein Matterhorn Gondola", status: "quoted", startTime: "10:00", vendor: "Zermatt Bergbahnen", location: "Matterhorn Glacier Paradise", address: "Bahnhofplatz, Zermatt", lat: 46.0207, lng: 7.7491, notes: "Weather-dependent. Backup: Gorner Gorge walk." }
       ]
     },
     {

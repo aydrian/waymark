@@ -8,6 +8,13 @@ const icons: Record<string, string> = {
   hotel: '🏨', transport: '✈️', activity: '🎯',
   note: '📝', restaurant: '🍽️', transfer: '🚗',
 };
+
+const mapsUrl = (() => {
+  if (item.lat != null && item.lng != null) return `https://maps.google.com/?q=${item.lat},${item.lng}`;
+  if (item.address) return `https://maps.google.com/maps/search/?q=${encodeURIComponent(item.address)}`;
+  if (item.location) return `https://maps.google.com/maps/search/?q=${encodeURIComponent(item.location)}`;
+  return undefined;
+})();
 ---
 <article class="flex gap-3 py-3">
   <div aria-hidden="true" class="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center text-base">
@@ -24,10 +31,20 @@ const icons: Record<string, string> = {
       </p>
     )}
     {item.location && (
-      <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">{item.location}</p>
+      <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">
+        {item.location}
+        {mapsUrl && (
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]" aria-label={`Open ${item.location} in Google Maps`}>📍</a>
+        )}
+      </p>
     )}
     {item.address && (
-      <p class="text-xs text-[var(--color-text-muted)] mt-0.5">{item.address}</p>
+      <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+        {mapsUrl
+          ? <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="underline decoration-dotted hover:text-[var(--color-text-secondary)]">{item.address}</a>
+          : item.address
+        }
+      </p>
     )}
     {item.vendor && (
       <p class="text-xs text-[var(--color-text-muted)] mt-0.5">via {item.vendor}</p>
