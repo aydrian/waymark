@@ -58,8 +58,8 @@ The sample trip has ID `a8k3m2q9` and PIN `1234`.
 # 1. Generate the seed JSON
 bun scripts/seed.ts > /tmp/trip.json
 
-# 2. Seed into local KV
-wrangler kv key put --binding=TRIPS --local "trip:a8k3m2q9" --path /tmp/trip.json
+# 2. Seed into local KV (--preview targets the namespace the dev server uses)
+wrangler kv key put --binding=TRIPS --local --preview "trip:a8k3m2q9" --path /tmp/trip.json
 
 # 3. Visit the trip
 open http://localhost:4321/trip/a8k3m2q9
@@ -144,8 +144,9 @@ One KV document per trip, stored under `trip:{id}`.
 The full schema is defined in `src/types/itinerary.ts`. Key fields:
 
 - `id` — 8-character alphanumeric slug (e.g. `a8k3m2q9`)
+- `stays[]` — hotel stays with explicit `checkinDate`/`checkoutDate`; check-in/checkout timeline entries are generated from this at render time
 - `days[]` — array of day objects, each with `items[]`
-- `items[].type` — `hotel | transport | activity | note | restaurant | transfer`
+- `items[].type` — `transport | activity | note | restaurant | transfer` (do not store `hotel` items — use `stays[]`)
 - `items[].status` — `booked | quoted | pending | canceled`
 - `pinSalt` + `pinHash` — PBKDF2-SHA256 PIN verification (never expose to clients)
 
@@ -165,10 +166,10 @@ Install it with the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
 # Project-scoped (current directory)
-npx skills add itsaydrian/waymark
+npx skills add aydrian/waymark
 
 # Global (available in every session)
-npx skills add itsaydrian/waymark -g
+npx skills add aydrian/waymark -g
 ```
 
 Once installed, an agent can manage trips on `https://waymark.itsaydrian.com` with just your `WAYMARK_ADMIN_TOKEN`. See [`waymark-trips/SKILL.md`](./waymark-trips/SKILL.md) for full details.
@@ -195,9 +196,9 @@ src/
     TripLayout.astro
   components/
     PinGateForm.astro, TripHeader.astro, DayFilter.astro,
-    DaySection.astro, TimelineItem.astro, StatusBadge.astro,
-    TripMap.astro
+    DaySection.astro, HotelStayBanner.astro, TimelineItem.astro,
+    StatusBadge.astro, TripMap.astro
 scripts/
   hash-pin.ts    # Generate PBKDF2 PIN hash
-  seed.ts        # Seed sample Amalfi Coast trip
+  seed.ts        # Seed sample trips (Amalfi Coast live + Swiss Alps upcoming)
 ```
