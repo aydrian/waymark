@@ -157,6 +157,22 @@ The full schema is defined in `src/types/itinerary.ts`. Key fields:
 - Trip URLs contain no personal information
 - Admin token is never rendered in public HTML
 
+## Agent Skill
+
+This repo includes a `waymark-trips` skill for Claude Code and OpenClaw agents, enabling them to create, read, update, and delete trips via the admin API.
+
+Install it with the [skills CLI](https://github.com/vercel-labs/skills):
+
+```bash
+# Project-scoped (current directory)
+npx skills add itsaydrian/waymark
+
+# Global (available in every session)
+npx skills add itsaydrian/waymark -g
+```
+
+Once installed, an agent can manage trips on `https://waymark.itsaydrian.com` with just your `WAYMARK_ADMIN_TOKEN`. See [`waymark-trips/SKILL.md`](./waymark-trips/SKILL.md) for full details.
+
 ## Project Structure
 
 ```
