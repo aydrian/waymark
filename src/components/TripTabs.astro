@@ -1,0 +1,37 @@
+---
+interface Props {
+  tripId: string;
+  activeTab: 'itinerary' | 'places';
+  poisCount: number;
+}
+const { tripId, activeTab, poisCount } = Astro.props;
+---
+<nav aria-label="Trip sections" class="border-b border-[var(--color-border)]">
+  <div class="flex px-4 sm:px-6">
+    <a
+      href={`/trip/${tripId}`}
+      aria-current={activeTab === 'itinerary' ? 'page' : undefined}
+      class={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] ${
+        activeTab === 'itinerary'
+          ? 'border-[var(--color-text-primary)] text-[var(--color-text-primary)]'
+          : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+      }`}
+    >Itinerary</a>
+    <a
+      href={`/trip/${tripId}?tab=places`}
+      aria-current={activeTab === 'places' ? 'page' : undefined}
+      class={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] ${
+        activeTab === 'places'
+          ? 'border-[var(--color-text-primary)] text-[var(--color-text-primary)]'
+          : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+      }`}
+    >
+      Places of Interest
+      {poisCount > 0 && (
+        <span class="rounded-full bg-[var(--color-bg-subtle)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
+          {poisCount}
+        </span>
+      )}
+    </a>
+  </div>
+</nav>
