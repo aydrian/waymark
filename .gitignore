@@ -30,3 +30,4 @@ pnpm-debug.log*
 .wrangler
 
 .claude/settings.local.json
+.superpowers
