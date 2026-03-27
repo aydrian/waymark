@@ -19,6 +19,7 @@ const LIVE_TRIP = {
   endDate: "2026-03-28",
   timezone: "Europe/Rome",
   summary: "A week exploring the Amalfi Coast and ending in Rome. Private transfers, boutique hotels, and curated dining experiences.",
+  travelers: ["Alex Morgan", "Jordan Rivera"],
   destinations: ["Naples", "Positano", "Ravello", "Rome"],
   pinSalt: "deadbeefcafebabedeadbeefcafebabe",
   pinHash: "643bf561dd676254c08d60701376ce3e9e638b80210a3f1c3ae0cee0c0ca0ccd",

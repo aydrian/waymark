@@ -45,6 +45,7 @@ export const ItinerarySchema = z.object({
   endDate: z.string(),   // YYYY-MM-DD
   timezone: z.string(),  // IANA timezone, e.g. "Europe/Rome"
   summary: z.string().optional(),
+  travelers: z.array(z.string()).optional(),
   destinations: z.array(z.string()),
   days: z.array(DaySchema),
   notes: z.string().optional(),

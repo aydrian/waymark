@@ -14,6 +14,7 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `endDate` | string | yes | YYYY-MM-DD |
 | `timezone` | string | yes | IANA timezone (e.g. `Europe/Rome`, `America/Chicago`) |
 | `summary` | string | no | Free text overview |
+| `travelers` | string[] | no | Names of the travelers on the trip |
 | `destinations` | string[] | yes | Array of place names (at least one recommended) |
 | `days` | Day[] | yes | Array of daily plans (see below) |
 | `notes` | string | no | General trip notes |
