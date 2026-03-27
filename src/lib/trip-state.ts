@@ -4,6 +4,7 @@ export type GeneratedItem = TripItem & {
   _legType?: 'departure' | 'arrival' | 'transit';
   _transportType?: 'flight' | 'train' | 'ferry' | 'bus' | 'other';
   _tzAbbr?: string;
+  _sortMs?: number; // UTC ms timestamp — used for correct ordering across timezones
 };
 
 /**
@@ -136,7 +137,12 @@ export function getHotelMapItems(stays: HotelStay[], date: string | null): TripI
 
 /**
  * Converts a local date+time in a given IANA timezone to a UTC millisecond timestamp.
- * Uses an approximation that handles DST correctly for most cases.
+ *
+ * Approach: treat the local date+time as a UTC probe, format that probe in the target
+ * timezone to get the displayed local date+time, then compute the full date+time
+ * difference (including date changes) and apply it as a correction. This correctly
+ * handles large UTC offsets (e.g. JST +9) and dateline crossings where the hour-only
+ * approach fails.
  */
 function localDateTimeToMs(date: string, time: string, timezone: string): number {
   const approxUTC = new Date(`${date}T${time}:00Z`);
@@ -147,13 +153,21 @@ function localDateTimeToMs(date: string, time: string, timezone: string): number
     hour12: false,
   }).formatToParts(approxUTC);
   const get = (type: string) => parts.find(p => p.type === type)?.value ?? '0';
-  const displayH = parseInt(get('hour'), 10) % 24;
+  const displayH = parseInt(get('hour'), 10) % 24; // handle rare "24" hour edge case
   const displayM = parseInt(get('minute'), 10);
-  const [targetH, targetM] = time.split(':').map(Number);
-  let offsetMin = (targetH * 60 + targetM) - (displayH * 60 + displayM);
-  if (offsetMin > 720) offsetMin -= 1440;
-  if (offsetMin < -720) offsetMin += 1440;
-  return approxUTC.getTime() - offsetMin * 60000;
+  const displayYear = parseInt(get('year'), 10);
+  const displayMonth = parseInt(get('month'), 10);
+  const displayDay = parseInt(get('day'), 10);
+
+  const [tYear, tMonth, tDay] = date.split('-').map(Number);
+  const [tH, tM] = time.split(':').map(Number);
+
+  // Compare full date+time values (using UTC epoch as neutral reference for arithmetic)
+  const displayMs = Date.UTC(displayYear, displayMonth - 1, displayDay, displayH, displayM);
+  const targetMs = Date.UTC(tYear, tMonth - 1, tDay, tH, tM);
+
+  // correction = targetLocal - displayedLocal; true UTC = probe + correction
+  return approxUTC.getTime() + (targetMs - displayMs);
 }
 
 function formatDuration(ms: number): string {
@@ -189,9 +203,9 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
   const items: GeneratedItem[] = [];
 
   for (const leg of legs) {
-    const durationMs =
-      localDateTimeToMs(leg.arrivalDate, leg.arrivalTime, leg.arrivalTimezone) -
-      localDateTimeToMs(leg.departureDate, leg.departureTime, leg.departureTimezone);
+    const depMs = localDateTimeToMs(leg.departureDate, leg.departureTime, leg.departureTimezone);
+    const arrMs = localDateTimeToMs(leg.arrivalDate, leg.arrivalTime, leg.arrivalTimezone);
+    const durationMs = arrMs - depMs;
     const transitLabel = `${TRANSIT_LABELS[leg.type]} · ${formatDuration(durationMs)}`;
     const sameDay = leg.departureDate === leg.arrivalDate;
 
@@ -215,10 +229,10 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
         _legType: 'departure',
         _transportType: leg.type,
         _tzAbbr: depTzAbbr,
+        _sortMs: depMs,
       });
 
       if (sameDay) {
-        // In-transit sorts after departure (same startTime, inserted second)
         items.push({
           id: `transport-${leg.id}-transit`,
           type: 'transport',
@@ -227,6 +241,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
           startTime: leg.departureTime,
           _legType: 'transit',
           _transportType: leg.type,
+          _sortMs: depMs + 1, // sorts immediately after departure
         });
       }
     }
@@ -242,6 +257,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
           startTime: '00:00',
           _legType: 'transit',
           _transportType: leg.type,
+          _sortMs: depMs + 1,
         });
       }
 
@@ -259,6 +275,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
         _legType: 'arrival',
         _transportType: leg.type,
         _tzAbbr: arrTzAbbr,
+        _sortMs: arrMs,
       });
     }
   }
