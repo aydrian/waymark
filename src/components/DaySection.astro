@@ -1,5 +1,6 @@
 ---
 import type { Day, TripItem, HotelStay } from '../types/itinerary';
+import type { GeneratedItem } from '../lib/trip-state';
 import TimelineItem from './TimelineItem.astro';
 import CurrentDayBadge from './CurrentDayBadge.astro';
 import HotelStayBanner from './HotelStayBanner.astro';
@@ -10,7 +11,7 @@ interface Props {
   activeStay?: HotelStay | null;
   checkinToday?: HotelStay | null;
   checkoutToday?: HotelStay | null;
-  generatedItems?: TripItem[];
+  generatedItems?: GeneratedItem[];
 }
 const {
   day,
@@ -25,7 +26,7 @@ const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US'
   weekday: 'short', month: 'short', day: 'numeric',
 });
 
-const allItems: TripItem[] = [...day.items, ...generatedItems].sort((a, b) => {
+const allItems: (TripItem | GeneratedItem)[] = [...day.items, ...generatedItems].sort((a, b) => {
   const ta = a.startTime ?? '99:99';
   const tb = b.startTime ?? '99:99';
   return ta < tb ? -1 : ta > tb ? 1 : 0;

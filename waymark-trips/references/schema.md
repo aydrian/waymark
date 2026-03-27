@@ -22,6 +22,7 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `pinHash` | string | yes | 64-char hex string (PBKDF2-SHA256 output, 256 bits) |
 | `updatedAt` | string | yes | ISO 8601 datetime, e.g. `2025-09-10T14:30:00.000Z` |
 | `stays` | HotelStay[] | no | Array of hotel stays (see below). Do NOT add `type: 'hotel'` items to day `items` — check-in/checkout timeline entries are generated at render time from this array. |
+| `transportLegs` | TransportLeg[] | no | Array of transport legs (see below). Preferred over `type: 'transport'` TripItems for flights, trains, ferries, and buses. Departure/arrival/in-transit entries are generated at render time. |
 | `map` | object | no | `{ centerLat?, centerLng?, zoom? }` — all optional numbers |
 
 ---
@@ -63,6 +64,37 @@ Represents a multi-night hotel stay. Stored at the itinerary level (not inside a
 
 ---
 
+## TransportLeg
+
+Represents a point-to-point transport leg (flight, train, ferry, bus). Stored at the itinerary level (not inside a day's items). The app generates 🛫 departure, ✈️ in-transit, and 🛬 arrival timeline entries automatically from this data.
+
+**Use this instead of a `type: 'transport'` TripItem** whenever the leg has distinct departure and arrival locations, timezones, or could span overnight.
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `id` | string | yes | Unique within the trip |
+| `type` | enum | yes | `flight` \| `train` \| `ferry` \| `bus` \| `other` |
+| `title` | string | yes | e.g. `"Flight NCE → NAP"` |
+| `status` | enum | yes | See status values below |
+| `departureDate` | string | yes | YYYY-MM-DD |
+| `departureTime` | string | yes | HH:MM (24-hour, local time at departure point) |
+| `departureTimezone` | string | yes | IANA timezone of departure location (e.g. `"Europe/Paris"`) |
+| `departureLocation` | string | no | Human-readable name, e.g. `"Nice Côte d'Azur Airport (NCE)"` |
+| `departureLat` | number | no | WGS84 latitude of departure point (for map pin) |
+| `departureLng` | number | no | WGS84 longitude of departure point (for map pin) |
+| `arrivalDate` | string | yes | YYYY-MM-DD — set to next day for overnight legs |
+| `arrivalTime` | string | yes | HH:MM (24-hour, local time at arrival point) |
+| `arrivalTimezone` | string | yes | IANA timezone of arrival location (e.g. `"Europe/Rome"`) |
+| `arrivalLocation` | string | no | Human-readable name, e.g. `"Naples International Airport (NAP)"` |
+| `arrivalLat` | number | no | WGS84 latitude of arrival point (for map pin) |
+| `arrivalLng` | number | no | WGS84 longitude of arrival point (for map pin) |
+| `vendor` | string | no | Airline or operator name |
+| `confirmationNumber` | string | no | Booking reference |
+| `seat` | string | no | Seat assignment, e.g. `"12A"` or `"41/42"` |
+| `notes` | string | no | Free text |
+
+---
+
 ## TripItem
 
 | Field | Type | Required | Constraints |
@@ -86,10 +118,10 @@ Represents a multi-night hotel stay. Stored at the itinerary level (not inside a
 | Value | When to use |
 |---|---|
 | `hotel` | Generated at render time from `stays` — do not store in day `items` |
-| `transport` | Flights, trains, buses, ferries |
+| `transport` | Legacy only — prefer `TransportLeg` in `transportLegs` for flights/trains/ferries/buses |
 | `activity` | Tours, excursions, museum visits, sightseeing |
 | `restaurant` | Dining reservations |
-| `transfer` | Airport/hotel transfers, taxis, car hire |
+| `transfer` | Local ground transfers (taxi, car hire, shuttle) with no distinct arrival airport/station |
 | `note` | Free-form annotations or reminders |
 
 ### Item status enum values

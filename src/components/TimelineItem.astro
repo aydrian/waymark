@@ -1,13 +1,31 @@
 ---
 import type { TripItem } from '../types/itinerary';
+import type { GeneratedItem } from '../lib/trip-state';
 import StatusBadge from './StatusBadge.astro';
-interface Props { item: TripItem }
+interface Props { item: TripItem | GeneratedItem }
 const { item } = Astro.props;
+const gi = item as GeneratedItem;
+const isTransit = gi._legType === 'transit';
 
 const icons: Record<string, string> = {
   hotel: '🏨', transport: '✈️', activity: '🎯',
   note: '📝', restaurant: '🍽️', transfer: '🚗',
 };
+
+const DEPARTURE_ICONS: Record<string, string> = {
+  flight: '🛫', train: '🚂', ferry: '⛴️', bus: '🚌', other: '🚐',
+};
+const ARRIVAL_ICONS: Record<string, string> = {
+  flight: '🛬', train: '🚉', ferry: '⛴️', bus: '🚌', other: '🚐',
+};
+
+const icon = (() => {
+  if (gi._legType === 'departure' && gi._transportType) return DEPARTURE_ICONS[gi._transportType] ?? '🛫';
+  if (gi._legType === 'arrival' && gi._transportType) return ARRIVAL_ICONS[gi._transportType] ?? '🛬';
+  if (gi._legType === 'transit' && gi._transportType === 'flight') return '✈️';
+  if (gi._legType === 'transit') return '🔄';
+  return icons[item.type] ?? '📌';
+})();
 
 const mapsUrl = (() => {
   if (item.lat != null && item.lng != null) return `https://maps.google.com/?q=${item.lat},${item.lng}`;
@@ -16,44 +34,55 @@ const mapsUrl = (() => {
   return undefined;
 })();
 ---
-<article class="flex gap-3 py-3">
-  <div aria-hidden="true" class="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center text-base">
-    {icons[item.type] ?? '📌'}
-  </div>
-  <div class="flex-1 min-w-0">
-    <div class="flex items-start gap-2 flex-wrap">
-      <h3 class="text-sm font-semibold text-[var(--color-text-primary)] leading-snug">{item.title}</h3>
-      <StatusBadge status={item.status} />
+{isTransit ? (
+  <article class="flex gap-3 py-2 opacity-50">
+    <div aria-hidden="true" class="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center text-base">
+      {icon}
     </div>
-    {(item.startTime || item.endTime) && (
-      <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">
-        {item.startTime}{item.endTime ? ` – ${item.endTime}` : ''}
-      </p>
-    )}
-    {item.location && (
-      <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">
-        {item.location}
-        {mapsUrl && (
-          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]" aria-label={`Open ${item.location} in Google Maps`}>📍</a>
-        )}
-      </p>
-    )}
-    {item.address && (
-      <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-        {mapsUrl
-          ? <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="underline decoration-dotted hover:text-[var(--color-text-secondary)]">{item.address}</a>
-          : item.address
-        }
-      </p>
-    )}
-    {item.vendor && (
-      <p class="text-xs text-[var(--color-text-muted)] mt-0.5">via {item.vendor}</p>
-    )}
-    {item.confirmationNumber && (
-      <p class="text-xs text-[var(--color-text-muted)] mt-0.5 font-mono">Conf: {item.confirmationNumber}</p>
-    )}
-    {item.notes && (
-      <p class="text-xs text-[var(--color-text-secondary)] mt-1 whitespace-pre-wrap">{item.notes}</p>
-    )}
-  </div>
-</article>
+    <div class="flex-1 min-w-0 flex items-center">
+      <p class="text-xs italic text-[var(--color-text-muted)]">{item.title}</p>
+    </div>
+  </article>
+) : (
+  <article class="flex gap-3 py-3">
+    <div aria-hidden="true" class="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center text-base">
+      {icon}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-start gap-2 flex-wrap">
+        <h3 class="text-sm font-semibold text-[var(--color-text-primary)] leading-snug">{item.title}</h3>
+        <StatusBadge status={item.status} />
+      </div>
+      {(item.startTime || item.endTime) && (
+        <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">
+          {item.startTime}{item.endTime ? ` – ${item.endTime}` : ''}{gi._tzAbbr ? ` ${gi._tzAbbr}` : ''}
+        </p>
+      )}
+      {item.location && (
+        <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">
+          {item.location}
+          {mapsUrl && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="ml-1 inline-flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]" aria-label={`Open ${item.location} in Google Maps`}>📍</a>
+          )}
+        </p>
+      )}
+      {item.address && (
+        <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+          {mapsUrl
+            ? <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="underline decoration-dotted hover:text-[var(--color-text-secondary)]">{item.address}</a>
+            : item.address
+          }
+        </p>
+      )}
+      {item.vendor && (
+        <p class="text-xs text-[var(--color-text-muted)] mt-0.5">via {item.vendor}</p>
+      )}
+      {item.confirmationNumber && (
+        <p class="text-xs text-[var(--color-text-muted)] mt-0.5 font-mono">Conf: {item.confirmationNumber}</p>
+      )}
+      {item.notes && (
+        <p class="text-xs text-[var(--color-text-secondary)] mt-1 whitespace-pre-wrap">{item.notes}</p>
+      )}
+    </div>
+  </article>
+)}

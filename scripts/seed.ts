@@ -26,6 +26,73 @@ const LIVE_TRIP = {
   updatedAt: "2026-03-25T12:00:00Z",
   notes: "All transfers are private. Hotel check-in is after 3pm. Emergency contact: Marco +39 333 1234567.",
   map: { centerLat: 40.628, centerLng: 14.485, zoom: 10 },
+  transportLegs: [
+    {
+      id: "d1-flight",
+      type: "flight",
+      title: "Flight NCE → NAP",
+      status: "booked",
+      departureDate: "2026-03-22",
+      departureTime: "09:15",
+      departureTimezone: "Europe/Paris",
+      departureLocation: "Nice Côte d'Azur Airport (NCE)",
+      departureLat: 43.6584,
+      departureLng: 7.2159,
+      arrivalDate: "2026-03-22",
+      arrivalTime: "11:40",
+      arrivalTimezone: "Europe/Rome",
+      arrivalLocation: "Naples International Airport (NAP)",
+      arrivalLat: 40.8860,
+      arrivalLng: 14.2908,
+      vendor: "ITA Airways",
+      confirmationNumber: "ITA-88821",
+      seat: "12A/12B",
+      notes: "Bags included."
+    },
+    {
+      id: "d4-train",
+      type: "train",
+      title: "Frecciarossa Naples → Rome",
+      status: "booked",
+      departureDate: "2026-03-25",
+      departureTime: "14:05",
+      departureTimezone: "Europe/Rome",
+      departureLocation: "Naples Centrale",
+      departureLat: 40.8536,
+      departureLng: 14.2713,
+      arrivalDate: "2026-03-25",
+      arrivalTime: "15:43",
+      arrivalTimezone: "Europe/Rome",
+      arrivalLocation: "Roma Termini",
+      arrivalLat: 41.9009,
+      arrivalLng: 12.5012,
+      vendor: "Trenitalia",
+      confirmationNumber: "FR-20264-8821",
+      seat: "41/42",
+      notes: "Carriage 6."
+    },
+    {
+      id: "d7-flight",
+      type: "flight",
+      title: "Flight FCO → NCE",
+      status: "booked",
+      departureDate: "2026-03-28",
+      departureTime: "17:20",
+      departureTimezone: "Europe/Rome",
+      departureLocation: "Rome Fiumicino Airport (FCO)",
+      departureLat: 41.8003,
+      departureLng: 12.2388,
+      arrivalDate: "2026-03-28",
+      arrivalTime: "18:55",
+      arrivalTimezone: "Europe/Paris",
+      arrivalLocation: "Nice Côte d'Azur Airport (NCE)",
+      arrivalLat: 43.6584,
+      arrivalLng: 7.2159,
+      vendor: "ITA Airways",
+      confirmationNumber: "ITA-88822",
+      notes: "Check-in closes 45 min before departure."
+    }
+  ],
   stays: [
     {
       id: "stay-positano",
@@ -67,17 +134,6 @@ const LIVE_TRIP = {
       title: "Arrival in Naples → Positano",
       notes: "Flight arrives NCE 11:40. Private transfer meets you at arrivals, sign: WAYMARK.",
       items: [
-        {
-          id: "d1-flight",
-          type: "transport",
-          title: "Flight NCE → NAP",
-          status: "booked",
-          startTime: "09:15",
-          endTime: "11:40",
-          vendor: "ITA Airways",
-          confirmationNumber: "ITA-88821",
-          notes: "Seat 12A/12B. Bags included."
-        },
         {
           id: "d1-transfer",
           type: "transfer",
@@ -207,17 +263,6 @@ const LIVE_TRIP = {
           startTime: "11:30",
           vendor: "Amalfi Transfers",
           confirmationNumber: "AT-5523"
-        },
-        {
-          id: "d4-train",
-          type: "transport",
-          title: "Frecciarossa Naples → Rome Termini",
-          status: "booked",
-          startTime: "14:05",
-          endTime: "15:43",
-          vendor: "Trenitalia",
-          confirmationNumber: "FR-20264-8821",
-          notes: "Carriage 6, seats 41/42."
         },
         {
           id: "d4-dinner-rome",
@@ -357,17 +402,6 @@ const LIVE_TRIP = {
           vendor: "Rome Transfers",
           confirmationNumber: "RT-4491",
           notes: "Driver: Luigi. Allow 60 min for the drive."
-        },
-        {
-          id: "d7-flight",
-          type: "transport",
-          title: "Flight FCO → NCE",
-          status: "booked",
-          startTime: "17:20",
-          endTime: "18:55",
-          vendor: "ITA Airways",
-          confirmationNumber: "ITA-88822",
-          notes: "Check-in closes 45 min before departure."
         }
       ]
     }

@@ -18,6 +18,8 @@ import {
   getActiveStayForNight,
   generateHotelTimelineItems,
   getHotelMapItems,
+  getTransportItemsForDay,
+  getTransportMapItems,
 } from '../../lib/trip-state';
 
 const { id } = Astro.params as { id: string };
@@ -53,12 +55,16 @@ const pois = trip.pois;
 
 // 5. Hotel stay context per day
 const stays = trip.stays ?? [];
+const legs = trip.transportLegs ?? [];
 const dayHotelContext = visibleDays.map(day => ({
   day,
   activeStay: getActiveStayForNight(stays, day.date),
   checkinToday: stays.find(s => s.checkinDate === day.date) ?? null,
   checkoutToday: stays.find(s => s.checkoutDate === day.date) ?? null,
-  generatedItems: generateHotelTimelineItems(stays, day.date),
+  generatedItems: [
+    ...generateHotelTimelineItems(stays, day.date),
+    ...getTransportItemsForDay(legs, day.date),
+  ],
 }));
 
 // 6. Map items: regular items from visible days + hotel pins from stays
@@ -71,7 +77,11 @@ if (activeFilter !== 'all') {
     hotelMapDate = trip.days.find(d => d.dayNumber === activeFilter)?.date ?? null;
   }
 }
-const mapItems = [...regularMapItems, ...getHotelMapItems(stays, hotelMapDate)];
+const mapItems = [
+  ...regularMapItems,
+  ...getHotelMapItems(stays, hotelMapDate),
+  ...getTransportMapItems(legs, hotelMapDate),
+];
 
 // 7. Prev/next day links (only when viewing a single numeric day)
 const singleDay = typeof activeFilter === 'number' ? activeFilter : null;
