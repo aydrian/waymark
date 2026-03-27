@@ -13,6 +13,9 @@ import {
   getTripStatus,
   getCurrentDay,
   getVisibleDays,
+  getActiveStayForNight,
+  generateHotelTimelineItems,
+  getHotelMapItems,
 } from '../../lib/trip-state';
 
 const { id } = Astro.params as { id: string };
@@ -41,10 +44,29 @@ const isLive = tripStatus === 'live';
 const currentDay = getCurrentDay(trip, now);
 const currentDayNumber = currentDay?.dayNumber;
 
-// 4. Map items scoped to visible days
-const mapItems = visibleDays.flatMap(d => d.items);
+// 4. Hotel stay context per day
+const stays = trip.stays ?? [];
+const dayHotelContext = visibleDays.map(day => ({
+  day,
+  activeStay: getActiveStayForNight(stays, day.date),
+  checkinToday: stays.find(s => s.checkinDate === day.date) ?? null,
+  checkoutToday: stays.find(s => s.checkoutDate === day.date) ?? null,
+  generatedItems: generateHotelTimelineItems(stays, day.date),
+}));
 
-// 5. Prev/next day links (only when viewing a single numeric day)
+// 5. Map items: regular items from visible days + hotel pins from stays
+const regularMapItems = visibleDays.flatMap(d => d.items);
+let hotelMapDate: string | null = null;
+if (activeFilter !== 'all') {
+  if (activeFilter === 'today') {
+    hotelMapDate = currentDay?.date ?? null;
+  } else {
+    hotelMapDate = trip.days.find(d => d.dayNumber === activeFilter)?.date ?? null;
+  }
+}
+const mapItems = [...regularMapItems, ...getHotelMapItems(stays, hotelMapDate)];
+
+// 6. Prev/next day links (only when viewing a single numeric day)
 const singleDay = typeof activeFilter === 'number' ? activeFilter : null;
 const prevDayNumber = singleDay !== null
   ? trip.days.find(d => d.dayNumber === singleDay - 1)?.dayNumber
@@ -53,7 +75,7 @@ const nextDayNumber = singleDay !== null
   ? trip.days.find(d => d.dayNumber === singleDay + 1)?.dayNumber
   : undefined;
 
-// 6. Formatted local date for live banner (e.g. "Wed, Mar 25")
+// 7. Formatted local date for live banner (e.g. "Wed, Mar 25")
 const localDateDisplay = isLive
   ? new Intl.DateTimeFormat('en-US', {
       timeZone: trip.timezone,
@@ -91,15 +113,19 @@ const localDateDisplay = isLive
         currentDayNumber={currentDayNumber}
       />
       <div class="py-4">
-        {visibleDays.length === 0 ? (
+        {dayHotelContext.length === 0 ? (
           <p class="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
             No days to show. <a href={`/trip/${id}`} class="underline">View all days</a>
           </p>
         ) : (
-          visibleDays.map(day => (
+          dayHotelContext.map(({ day, activeStay, checkinToday, checkoutToday, generatedItems }) => (
             <DaySection
               day={day}
               isToday={day.dayNumber === currentDayNumber}
+              activeStay={activeStay}
+              checkinToday={checkinToday}
+              checkoutToday={checkoutToday}
+              generatedItems={generatedItems}
             />
           ))
         )}

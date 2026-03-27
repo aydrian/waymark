@@ -21,6 +21,7 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `pinSalt` | string | yes | 32-char hex string (16 random bytes encoded as hex) |
 | `pinHash` | string | yes | 64-char hex string (PBKDF2-SHA256 output, 256 bits) |
 | `updatedAt` | string | yes | ISO 8601 datetime, e.g. `2025-09-10T14:30:00.000Z` |
+| `stays` | HotelStay[] | no | Array of hotel stays (see below). Do NOT add `type: 'hotel'` items to day `items` — check-in/checkout timeline entries are generated at render time from this array. |
 | `map` | object | no | `{ centerLat?, centerLng?, zoom? }` — all optional numbers |
 
 ---
@@ -36,6 +37,29 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `items` | TripItem[] | yes | Can be an empty array `[]` |
 
 Days should be contiguous and cover the full trip from `startDate` to `endDate`.
+
+---
+
+## HotelStay
+
+Represents a multi-night hotel stay. Stored at the itinerary level (not inside a day's items).
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `id` | string | yes | Unique within the trip |
+| `title` | string | yes | Hotel name, e.g. `"Le Sirenuse"` |
+| `status` | enum | yes | See status values below |
+| `checkinDate` | string | yes | YYYY-MM-DD |
+| `checkinTime` | string | no | HH:MM (24-hour) |
+| `checkoutDate` | string | yes | YYYY-MM-DD |
+| `checkoutTime` | string | no | HH:MM (24-hour) |
+| `location` | string | no | Venue or area name |
+| `address` | string | no | Full street address |
+| `lat` | number | no | WGS84 latitude (for map pin) |
+| `lng` | number | no | WGS84 longitude (for map pin) |
+| `vendor` | string | no | Hotel chain name |
+| `confirmationNumber` | string | no | Booking reference |
+| `notes` | string | no | Room type, inclusions, special requests |
 
 ---
 
@@ -61,7 +85,7 @@ Days should be contiguous and cover the full trip from `startDate` to `endDate`.
 
 | Value | When to use |
 |---|---|
-| `hotel` | Accommodation check-in/check-out |
+| `hotel` | Generated at render time from `stays` — do not store in day `items` |
 | `transport` | Flights, trains, buses, ferries |
 | `activity` | Tours, excursions, museum visits, sightseeing |
 | `restaurant` | Dining reservations |

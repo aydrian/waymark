@@ -26,6 +26,40 @@ const LIVE_TRIP = {
   updatedAt: "2026-03-25T12:00:00Z",
   notes: "All transfers are private. Hotel check-in is after 3pm. Emergency contact: Marco +39 333 1234567.",
   map: { centerLat: 40.628, centerLng: 14.485, zoom: 10 },
+  stays: [
+    {
+      id: "stay-positano",
+      title: "Le Sirenuse",
+      status: "booked",
+      checkinDate: "2026-03-22",
+      checkinTime: "15:00",
+      checkoutDate: "2026-03-25",
+      checkoutTime: "11:00",
+      location: "Le Sirenuse",
+      address: "Via Cristoforo Colombo 30, Positano",
+      lat: 40.6281,
+      lng: 14.4843,
+      vendor: "Le Sirenuse",
+      confirmationNumber: "LS-2026-441",
+      notes: "Junior Suite Sea View. Breakfast included."
+    },
+    {
+      id: "stay-rome",
+      title: "Hotel de Russie",
+      status: "booked",
+      checkinDate: "2026-03-25",
+      checkinTime: "16:30",
+      checkoutDate: "2026-03-28",
+      checkoutTime: "12:00",
+      location: "Hotel de Russie",
+      address: "Via del Babuino 9, Rome",
+      lat: 41.9058,
+      lng: 12.4781,
+      vendor: "Hotel de Russie",
+      confirmationNumber: "HDR-2026-112",
+      notes: "Deluxe Garden Room. Breakfast included."
+    }
+  ],
   days: [
     {
       date: "2026-03-22",
@@ -55,20 +89,6 @@ const LIVE_TRIP = {
           lat: 40.628,
           lng: 14.485,
           notes: "Driver: Marco. ~90 min drive."
-        },
-        {
-          id: "d1-hotel",
-          type: "hotel",
-          title: "Le Sirenuse, Positano — Check-in",
-          status: "booked",
-          startTime: "15:00",
-          location: "Le Sirenuse",
-          address: "Via Cristoforo Colombo 30, Positano",
-          lat: 40.6281,
-          lng: 14.4843,
-          vendor: "Le Sirenuse",
-          confirmationNumber: "LS-2026-441",
-          notes: "Junior Suite Sea View. Breakfast included."
         },
         {
           id: "d1-dinner",
@@ -180,13 +200,6 @@ const LIVE_TRIP = {
       notes: "Pack the night before. Checkout at 11:00.",
       items: [
         {
-          id: "d4-checkout",
-          type: "hotel",
-          title: "Le Sirenuse — Checkout",
-          status: "booked",
-          startTime: "11:00"
-        },
-        {
           id: "d4-transfer-naples",
           type: "transfer",
           title: "Transfer Positano → Naples Centrale",
@@ -205,20 +218,6 @@ const LIVE_TRIP = {
           vendor: "Trenitalia",
           confirmationNumber: "FR-20264-8821",
           notes: "Carriage 6, seats 41/42."
-        },
-        {
-          id: "d4-hotel-rome",
-          type: "hotel",
-          title: "Hotel de Russie, Rome — Check-in",
-          status: "booked",
-          startTime: "16:30",
-          location: "Hotel de Russie",
-          address: "Via del Babuino 9, Rome",
-          lat: 41.9058,
-          lng: 12.4781,
-          vendor: "Hotel de Russie",
-          confirmationNumber: "HDR-2026-112",
-          notes: "Deluxe Garden Room. Breakfast included."
         },
         {
           id: "d4-dinner-rome",
@@ -349,13 +348,6 @@ const LIVE_TRIP = {
       title: "Departure from Rome",
       notes: "Checkout at 12:00. Transfer to Fiumicino at 13:30.",
       items: [
-        {
-          id: "d7-checkout",
-          type: "hotel",
-          title: "Hotel de Russie — Checkout",
-          status: "booked",
-          startTime: "12:00"
-        },
         {
           id: "d7-transfer",
           type: "transfer",

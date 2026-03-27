@@ -8,6 +8,23 @@ export const ItemStatusSchema = z.enum([
   'booked', 'quoted', 'pending', 'canceled',
 ]);
 
+export const HotelStaySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: ItemStatusSchema,
+  checkinDate: z.string(),              // YYYY-MM-DD
+  checkinTime: z.string().optional(),   // HH:MM
+  checkoutDate: z.string(),             // YYYY-MM-DD
+  checkoutTime: z.string().optional(),  // HH:MM
+  location: z.string().optional(),
+  address: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  vendor: z.string().optional(),
+  confirmationNumber: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 export const TripItemSchema = z.object({
   id: z.string(),
   type: ItemTypeSchema,
@@ -49,6 +66,7 @@ export const ItinerarySchema = z.object({
   destinations: z.array(z.string()),
   days: z.array(DaySchema),
   notes: z.string().optional(),
+  stays: z.array(HotelStaySchema).optional(),
   pinSalt: z.string(),
   pinHash: z.string(),
   updatedAt: z.string(), // ISO datetime
@@ -58,6 +76,7 @@ export const ItinerarySchema = z.object({
 // TypeScript types derived from schemas
 export type ItemType = z.infer<typeof ItemTypeSchema>;
 export type ItemStatus = z.infer<typeof ItemStatusSchema>;
+export type HotelStay = z.infer<typeof HotelStaySchema>;
 export type TripItem = z.infer<typeof TripItemSchema>;
 export type Day = z.infer<typeof DaySchema>;
 export type Itinerary = z.infer<typeof ItinerarySchema>;

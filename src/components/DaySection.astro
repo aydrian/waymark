@@ -1,17 +1,37 @@
 ---
-import type { Day } from '../types/itinerary';
+import type { Day, TripItem, HotelStay } from '../types/itinerary';
 import TimelineItem from './TimelineItem.astro';
 import CurrentDayBadge from './CurrentDayBadge.astro';
+import HotelStayBanner from './HotelStayBanner.astro';
 
 interface Props {
   day: Day;
   isToday?: boolean;
+  activeStay?: HotelStay | null;
+  checkinToday?: HotelStay | null;
+  checkoutToday?: HotelStay | null;
+  generatedItems?: TripItem[];
 }
-const { day, isToday = false } = Astro.props;
+const {
+  day,
+  isToday = false,
+  activeStay = null,
+  checkinToday = null,
+  checkoutToday = null,
+  generatedItems = [],
+} = Astro.props;
 
 const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {
   weekday: 'short', month: 'short', day: 'numeric',
 });
+
+const allItems: TripItem[] = [...day.items, ...generatedItems].sort((a, b) => {
+  const ta = a.startTime ?? '99:99';
+  const tb = b.startTime ?? '99:99';
+  return ta < tb ? -1 : ta > tb ? 1 : 0;
+});
+
+const hasHotelBanner = activeStay !== null || checkoutToday !== null;
 ---
 <section class="mb-6">
   <div class="px-4 py-3 sm:px-6">
@@ -25,11 +45,18 @@ const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US'
       <p class="text-sm text-[var(--color-text-secondary)] mt-1">{day.notes}</p>
     )}
   </div>
+  {hasHotelBanner && (
+    <HotelStayBanner
+      activeStay={activeStay}
+      checkinToday={checkinToday}
+      checkoutToday={checkoutToday}
+    />
+  )}
   <div class="bg-[var(--color-surface)] border-y border-[var(--color-border)] px-4 divide-y divide-[var(--color-border-subtle)] sm:px-6">
-    {day.items.length === 0 ? (
+    {allItems.length === 0 ? (
       <p class="py-4 text-sm text-[var(--color-text-muted)] italic">No items for this day.</p>
     ) : (
-      day.items.map(item => <TimelineItem item={item} />)
+      allItems.map(item => <TimelineItem item={item} />)
     )}
   </div>
 </section>
