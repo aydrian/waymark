@@ -6,6 +6,8 @@ import DaySection from '../../components/DaySection.astro';
 import TripMap from '../../components/TripMap.astro';
 import PinGateForm from '../../components/PinGateForm.astro';
 import LiveTripBanner from '../../components/LiveTripBanner.astro';
+import TripTabs from '../../components/TripTabs.astro';
+import PlacesTab from '../../components/PlacesTab.astro';
 import { env } from 'cloudflare:workers';
 import { getTrip } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
@@ -44,7 +46,12 @@ const isLive = tripStatus === 'live';
 const currentDay = getCurrentDay(trip, now);
 const currentDayNumber = currentDay?.dayNumber;
 
-// 4. Hotel stay context per day
+// 4. Tab state
+const tabParam = Astro.url.searchParams.get('tab');
+const activeTab = tabParam === 'places' ? 'places' : 'itinerary';
+const pois = trip.pois;
+
+// 5. Hotel stay context per day
 const stays = trip.stays ?? [];
 const dayHotelContext = visibleDays.map(day => ({
   day,
@@ -54,7 +61,7 @@ const dayHotelContext = visibleDays.map(day => ({
   generatedItems: generateHotelTimelineItems(stays, day.date),
 }));
 
-// 5. Map items: regular items from visible days + hotel pins from stays
+// 6. Map items: regular items from visible days + hotel pins from stays
 const regularMapItems = visibleDays.flatMap(d => d.items);
 let hotelMapDate: string | null = null;
 if (activeFilter !== 'all') {
@@ -66,7 +73,7 @@ if (activeFilter !== 'all') {
 }
 const mapItems = [...regularMapItems, ...getHotelMapItems(stays, hotelMapDate)];
 
-// 6. Prev/next day links (only when viewing a single numeric day)
+// 7. Prev/next day links (only when viewing a single numeric day)
 const singleDay = typeof activeFilter === 'number' ? activeFilter : null;
 const prevDayNumber = singleDay !== null
   ? trip.days.find(d => d.dayNumber === singleDay - 1)?.dayNumber
@@ -75,7 +82,7 @@ const nextDayNumber = singleDay !== null
   ? trip.days.find(d => d.dayNumber === singleDay + 1)?.dayNumber
   : undefined;
 
-// 7. Formatted local date for live banner (e.g. "Wed, Mar 25")
+// 8. Formatted local date for live banner (e.g. "Wed, Mar 25")
 const localDateDisplay = isLive
   ? new Intl.DateTimeFormat('en-US', {
       timeZone: trip.timezone,
@@ -99,65 +106,72 @@ const localDateDisplay = isLive
         />
       )}
       <TripHeader trip={trip} />
-      <TripMap
-        items={mapItems}
-        centerLat={activeFilter === 'all' ? trip.map?.centerLat : undefined}
-        centerLng={activeFilter === 'all' ? trip.map?.centerLng : undefined}
-        zoom={activeFilter === 'all' ? trip.map?.zoom : undefined}
-      />
-      <DayFilter
-        days={trip.days}
-        activeFilter={activeFilter}
-        tripId={id}
-        isLive={isLive}
-        currentDayNumber={currentDayNumber}
-      />
-      <div class="py-4">
-        {dayHotelContext.length === 0 ? (
-          <p class="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
-            No days to show. <a href={`/trip/${id}`} class="underline">View all days</a>
-          </p>
-        ) : (
-          dayHotelContext.map(({ day, activeStay, checkinToday, checkoutToday, generatedItems }) => (
-            <DaySection
-              day={day}
-              isToday={day.dayNumber === currentDayNumber}
-              activeStay={activeStay}
-              checkinToday={checkinToday}
-              checkoutToday={checkoutToday}
-              generatedItems={generatedItems}
-            />
-          ))
-        )}
-      </div>
+      <TripTabs tripId={id} activeTab={activeTab} poisCount={pois.length} />
+      {activeTab === 'places' ? (
+        <PlacesTab pois={pois} />
+      ) : (
+        <>
+          <TripMap
+            items={mapItems}
+            centerLat={activeFilter === 'all' ? trip.map?.centerLat : undefined}
+            centerLng={activeFilter === 'all' ? trip.map?.centerLng : undefined}
+            zoom={activeFilter === 'all' ? trip.map?.zoom : undefined}
+          />
+          <DayFilter
+            days={trip.days}
+            activeFilter={activeFilter}
+            tripId={id}
+            isLive={isLive}
+            currentDayNumber={currentDayNumber}
+          />
+          <div class="py-4">
+            {dayHotelContext.length === 0 ? (
+              <p class="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                No days to show. <a href={`/trip/${id}`} class="underline">View all days</a>
+              </p>
+            ) : (
+              dayHotelContext.map(({ day, activeStay, checkinToday, checkoutToday, generatedItems }) => (
+                <DaySection
+                  day={day}
+                  isToday={day.dayNumber === currentDayNumber}
+                  activeStay={activeStay}
+                  checkinToday={checkinToday}
+                  checkoutToday={checkoutToday}
+                  generatedItems={generatedItems}
+                />
+              ))
+            )}
+          </div>
 
-      {/* Prev/next navigation — only when viewing a single numeric day */}
-      {singleDay !== null && (prevDayNumber !== undefined || nextDayNumber !== undefined) && (
-        <nav
-          aria-label="Day navigation"
-          class="flex items-center justify-between px-4 pb-8 pt-2 text-sm sm:px-6"
-        >
-          <div>
-            {prevDayNumber !== undefined ? (
-              <a
-                href={`/trip/${id}?day=${prevDayNumber}`}
-                class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
-              >
-                ← Day {prevDayNumber}
-              </a>
-            ) : <span />}
-          </div>
-          <div>
-            {nextDayNumber !== undefined ? (
-              <a
-                href={`/trip/${id}?day=${nextDayNumber}`}
-                class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
-              >
-                Day {nextDayNumber} →
-              </a>
-            ) : <span />}
-          </div>
-        </nav>
+          {/* Prev/next navigation — only when viewing a single numeric day */}
+          {singleDay !== null && (prevDayNumber !== undefined || nextDayNumber !== undefined) && (
+            <nav
+              aria-label="Day navigation"
+              class="flex items-center justify-between px-4 pb-8 pt-2 text-sm sm:px-6"
+            >
+              <div>
+                {prevDayNumber !== undefined ? (
+                  <a
+                    href={`/trip/${id}?day=${prevDayNumber}`}
+                    class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
+                  >
+                    ← Day {prevDayNumber}
+                  </a>
+                ) : <span />}
+              </div>
+              <div>
+                {nextDayNumber !== undefined ? (
+                  <a
+                    href={`/trip/${id}?day=${nextDayNumber}`}
+                    class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
+                  >
+                    Day {nextDayNumber} →
+                  </a>
+                ) : <span />}
+              </div>
+            </nav>
+          )}
+        </>
       )}
     </main>
   )}
