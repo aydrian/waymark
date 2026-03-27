@@ -56,6 +56,10 @@ const mapData = JSON.stringify({
       maxZoom: 19,
     }).addTo(map);
 
+    function esc(s: string): string {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     const markers: L.Marker[] = [];
     for (const poi of pois) {
       const color = CATEGORY_COLORS[poi.category] ?? '#6b7280';
@@ -67,7 +71,7 @@ const mapData = JSON.stringify({
       });
       const marker = L.marker([poi.lat, poi.lng], { icon });
       const detail = poi.address ?? poi.city;
-      marker.bindPopup(`<strong>${poi.name}</strong>${detail ? `<br><span style="font-size:0.75rem">${detail}</span>` : ''}`);
+      marker.bindPopup(`<strong>${esc(poi.name)}</strong>${detail ? `<br><span style="font-size:0.75rem">${esc(detail)}</span>` : ''}`);
       marker.addTo(map);
       markers.push(marker);
     }
