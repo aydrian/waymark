@@ -25,6 +25,24 @@ export const HotelStaySchema = z.object({
   notes: z.string().optional(),
 });
 
+export const PoiCategorySchema = z.enum([
+  'restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other',
+]);
+
+export const PlaceOfInterestSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: PoiCategorySchema,
+  city: z.string(),
+  address: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  website: z.string().url().optional(),
+  googleMapsUrl: z.string().url().optional(),
+  description: z.string().optional(),
+  advisorNotes: z.string().optional(),
+});
+
 export const TripItemSchema = z.object({
   id: z.string(),
   type: ItemTypeSchema,
@@ -67,6 +85,7 @@ export const ItinerarySchema = z.object({
   days: z.array(DaySchema),
   notes: z.string().optional(),
   stays: z.array(HotelStaySchema).optional(),
+  pois: z.array(PlaceOfInterestSchema).optional().default([]),
   pinSalt: z.string(),
   pinHash: z.string(),
   updatedAt: z.string(), // ISO datetime
@@ -77,6 +96,8 @@ export const ItinerarySchema = z.object({
 export type ItemType = z.infer<typeof ItemTypeSchema>;
 export type ItemStatus = z.infer<typeof ItemStatusSchema>;
 export type HotelStay = z.infer<typeof HotelStaySchema>;
+export type PoiCategory = z.infer<typeof PoiCategorySchema>;
+export type PlaceOfInterest = z.infer<typeof PlaceOfInterestSchema>;
 export type TripItem = z.infer<typeof TripItemSchema>;
 export type Day = z.infer<typeof DaySchema>;
 export type Itinerary = z.infer<typeof ItinerarySchema>;
