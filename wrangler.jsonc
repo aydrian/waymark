@@ -18,12 +18,25 @@
 			"binding": "TRIPS",
 			"id": "3ff4e7bde86b4346b0cbe41209b2541a",
 			"preview_id": "71a7b06de58346e4a96477f8deff859c"
+		},
+		{
+			"binding": "WEBHOOKS",
+			"id": "03928684c78546018981e40a3f9232cc",
+			"preview_id": "cbf027f524964194881517e1557c2a30"
 		}
 	],
+	"vars": {
+		"RESEND_SENDER_ALLOWLIST": "aydrian@gmail.com,aydrian.howard@fora.travel"
+	},
 	"secrets": {
 		"required": [
 			"ADMIN_API_TOKEN",
-			"COOKIE_SIGNING_SECRET"
+			"COOKIE_SIGNING_SECRET",
+			"RESEND_API_KEY",
+			"RESEND_WEBHOOK_SECRET",
+			"OPENCLAW_TOKEN",
+			"OPENCLAW_MAIN_HOOK_URL",
+			"OPENCLAW_WAYMARK_HOOK_URL"
 		]
 	}
 }

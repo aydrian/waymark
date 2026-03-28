@@ -3,6 +3,6 @@
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist", "scripts"],
   "compilerOptions": {
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@types/node"]
   }
 }
