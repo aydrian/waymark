@@ -10,6 +10,14 @@ interface Props {
 const { activeStay, checkinToday, checkoutToday } = Astro.props;
 
 const hasContent = activeStay !== null || checkoutToday !== null;
+
+const mapsUrl = (() => {
+  if (!activeStay) return undefined;
+  if (activeStay.googleMapsUrl) return activeStay.googleMapsUrl;
+  if (activeStay.lat != null && activeStay.lng != null) return `https://maps.google.com/?q=${activeStay.lat},${activeStay.lng}`;
+  if (activeStay.address) return `https://maps.google.com/maps/search/?q=${encodeURIComponent(activeStay.address)}`;
+  return undefined;
+})();
 if (!hasContent) return;
 
 const isCheckinDay = activeStay !== null && checkinToday !== null && activeStay.id === checkinToday.id;
@@ -44,8 +52,13 @@ const isIntermediateDay = activeStay !== null && !isCheckinDay;
               <span class="text-xs text-[var(--color-text-muted)]">Staying tonight</span>
             )}
           </div>
-          {activeStay.address && (
-            <p class="mt-0.5 text-xs text-[var(--color-text-secondary)] truncate">{activeStay.address}</p>
+          {(activeStay.address || mapsUrl) && (
+            <p class="mt-0.5 text-xs text-[var(--color-text-secondary)] truncate">
+              {activeStay.address}
+              {mapsUrl && (
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer" class="ml-1 underline decoration-dotted hover:text-[var(--color-text-primary)]" aria-label={`Open ${activeStay.title} in Google Maps`}>Google Maps ↗</a>
+              )}
+            </p>
           )}
           {isCheckinDay && (
             <p class="mt-0.5 text-xs text-[var(--color-text-muted)]">
