@@ -42,7 +42,7 @@ export function verifyResendWebhook(
  * Uses the typed SDK shape directly — no defensive fallbacks needed.
  *
  * Note: body content (text/html) is NOT included in the webhook payload.
- * Fetch it separately via fetchReceivedEmailContent(emailId).
+ * The receiving agent retrieves it via its own Resend skill using emailId.
  */
 export function extractEmailFields(event: EmailReceivedEvent): {
   emailId: string;
