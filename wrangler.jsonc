@@ -26,7 +26,8 @@
 		}
 	],
 	"vars": {
-		"RESEND_SENDER_ALLOWLIST": "aydrian@gmail.com,aydrian.howard@fora.travel"
+		"RESEND_SENDER_ALLOWLIST": "aydrian@gmail.com,aydrian.howard@fora.travel",
+		"OPENCLAW_HOOK_URL": "https://openclaw-pi.tail5c860f.ts.net/hooks"
 	},
 	"secrets": {
 		"required": [
@@ -34,8 +35,7 @@
 			"COOKIE_SIGNING_SECRET",
 			"RESEND_API_KEY",
 			"RESEND_WEBHOOK_SECRET",
-			"OPENCLAW_TOKEN",
-			"OPENCLAW_HOOK_URL"
+			"OPENCLAW_TOKEN"
 		]
 	}
 }
