@@ -1,13 +1,9 @@
-import type { AgentName } from './email-routing';
-
-export interface SanitizedEmailPayload {
+export interface EmailDispatchPayload {
   svixId: string | null;
   sender: string;
   recipient: string;
   subject: string;
-  text: string | null;
-  html: string | null;
-  agent: AgentName;
+  emailId: string;
 }
 
 export interface DispatchResult {
@@ -17,33 +13,22 @@ export interface DispatchResult {
 
 interface DispatchEnv {
   OPENCLAW_TOKEN: string;
-  OPENCLAW_MAIN_HOOK_URL: string;
-  OPENCLAW_WAYMARK_HOOK_URL: string;
+  OPENCLAW_HOOK_URL: string;
 }
 
-/**
- * Dispatches an email payload to the correct OpenClaw agent endpoint.
- *
- * Sends envelope metadata plus text/html body for content processing.
- * Attachment content is never forwarded.
- *
- * Auth: x-openclaw-token header with OPENCLAW_TOKEN.
- */
 export async function dispatchToAgent(
-  agent: AgentName,
-  payload: SanitizedEmailPayload,
+  payload: EmailDispatchPayload,
   dispatchEnv: DispatchEnv,
 ): Promise<DispatchResult> {
-  const url =
-    agent === 'main' ? dispatchEnv.OPENCLAW_MAIN_HOOK_URL : dispatchEnv.OPENCLAW_WAYMARK_HOOK_URL;
+  const message = `Retrieve and process email ${payload.emailId} via Resend. From: ${payload.sender}. Subject: ${payload.subject}.`;
 
-  const response = await fetch(url, {
+  const response = await fetch(dispatchEnv.OPENCLAW_HOOK_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${dispatchEnv.OPENCLAW_TOKEN}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ message, name: payload.subject }),
   });
 
   return { ok: response.ok, status: response.status };
