@@ -41,7 +41,7 @@ export async function dispatchToAgent(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-openclaw-token': dispatchEnv.OPENCLAW_TOKEN,
+      Authorization: `Bearer ${dispatchEnv.OPENCLAW_TOKEN}`,
     },
     body: JSON.stringify(payload),
   });
