@@ -2,9 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { verifyResendWebhook, extractEmailFields } from '../../lib/server/resend-webhook';
 import { parseSenderAllowList, isSenderAllowed } from '../../lib/server/sender-allowlist';
-import { resolveAgentFromRecipient } from '../../lib/server/email-routing';
 import { dispatchToAgent } from '../../lib/server/agent-dispatch';
-import { fetchReceivedEmailContent } from '../../lib/server/resend-email-fetch';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
@@ -26,10 +24,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   // 3. Only process email.received events
   if (verified.type !== 'email.received') {
-    return new Response(JSON.stringify({ ok: true, ignored: true, reason: 'unhandled_event_type' }), {
-      status: 202,
-      headers: JSON_HEADERS,
-    });
+    return new Response(
+      JSON.stringify({ ok: true, ignored: true, reason: 'unhandled_event_type' }),
+      { status: 202, headers: JSON_HEADERS },
+    );
   }
 
   // 4. Extract svix-id for idempotency
@@ -56,22 +54,20 @@ export const POST: APIRoute = async ({ request }) => {
   // 8. Enforce sender allow list
   const allowListRules = parseSenderAllowList(env.RESEND_SENDER_ALLOWLIST ?? '');
   if (!isSenderAllowed(sender, allowListRules)) {
-    console.log(`[resend-webhook] svix-id=${svixId ?? 'unknown'} sender=${sender} allowed=false`);
+    console.log(
+      `[resend-webhook] svix-id=${svixId ?? 'unknown'} sender=${sender} allowed=false`,
+    );
     return new Response(
       JSON.stringify({ ok: true, ignored: true, reason: 'sender_not_allowed' }),
       { status: 202, headers: JSON_HEADERS },
     );
   }
 
-  // 9. Normalize recipient to lowercase
-  const recipient = rawRecipient ? rawRecipient.toLowerCase() : null;
-
-  // 10. Resolve target agent from recipient address
-  const agent = recipient ? resolveAgentFromRecipient(recipient) : null;
-
-  if (!agent) {
+  // 9. Drop anything not addressed to waymark@*
+  const recipient = rawRecipient?.toLowerCase() ?? null;
+  if (!recipient?.startsWith('waymark@')) {
     console.log(
-      `[resend-webhook] svix-id=${svixId ?? 'unknown'} sender=${sender} recipient=${recipient ?? 'unknown'} allowed=true route=none`,
+      `[resend-webhook] svix-id=${svixId ?? 'unknown'} sender=${sender} recipient=${recipient ?? 'unknown'} route=none`,
     );
     return new Response(
       JSON.stringify({ ok: true, ignored: true, reason: 'unknown_recipient' }),
@@ -79,45 +75,24 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  // 11. Fetch full email body from Resend API
-  const emailContent = await fetchReceivedEmailContent(emailId, env.RESEND_API_KEY);
-  if (!emailContent) {
-    console.warn(
-      `[resend-webhook] svix-id=${svixId ?? 'unknown'} email_id=${emailId} body_fetch=failed — dispatching without body`,
-    );
-  }
-
-  // 12. Dispatch sanitized payload to the correct OpenClaw agent
-  // recipient is guaranteed non-null here: resolveAgentFromRecipient only returns
-  // a non-null agent when recipient is non-null, and we returned early if !agent.
-  const sanitizedPayload = {
-    svixId,
-    sender,
-    recipient: recipient!,
-    subject,
-    text: emailContent?.text ?? null,
-    html: emailContent?.html ?? null,
-    agent,
-  };
-
-  const dispatchResult = await dispatchToAgent(agent, sanitizedPayload, {
-    OPENCLAW_TOKEN: env.OPENCLAW_TOKEN,
-    OPENCLAW_MAIN_HOOK_URL: env.OPENCLAW_MAIN_HOOK_URL,
-    OPENCLAW_WAYMARK_HOOK_URL: env.OPENCLAW_WAYMARK_HOOK_URL,
-  });
-
-  console.log(
-    `[resend-webhook] svix-id=${svixId ?? 'unknown'} email_id=${emailId} sender=${sender} recipient=${recipient} route=${agent} dispatch=${dispatchResult.status}`,
+  // 10. Dispatch to OpenClaw waymark agent
+  const dispatchResult = await dispatchToAgent(
+    { svixId, sender, recipient, subject, emailId },
+    { OPENCLAW_TOKEN: env.OPENCLAW_TOKEN, OPENCLAW_HOOK_URL: env.OPENCLAW_HOOK_URL },
   );
 
-  // 13. Mark as processed in KV
+  console.log(
+    `[resend-webhook] svix-id=${svixId ?? 'unknown'} email_id=${emailId} sender=${sender} recipient=${recipient} dispatch=${dispatchResult.status}`,
+  );
+
+  // 11. Mark as processed in KV
   if (svixId) {
     await env.WEBHOOKS.put(WEBHOOK_DEDUP_KEY(svixId), '1', {
       expirationTtl: WEBHOOK_DEDUP_TTL_SECONDS,
     });
   }
 
-  return new Response(JSON.stringify({ ok: true, agent, dispatch: dispatchResult.status }), {
+  return new Response(JSON.stringify({ ok: true, dispatch: dispatchResult.status }), {
     status: 200,
     headers: JSON_HEADERS,
   });
