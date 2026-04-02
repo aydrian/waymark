@@ -25,17 +25,18 @@
 			"preview_id": "cbf027f524964194881517e1557c2a30"
 		}
 	],
+	"ai": {
+		"binding": "AI"
+	},
 	"vars": {
-		"RESEND_SENDER_ALLOWLIST": "aydrian@gmail.com,aydrian.howard@fora.travel",
-		"OPENCLAW_HOOK_URL": "https://openclaw-pi.tail5c860f.ts.net/hooks"
+		"RESEND_SENDER_ALLOWLIST": "aydrian@gmail.com,aydrian.howard@fora.travel"
 	},
 	"secrets": {
 		"required": [
 			"ADMIN_API_TOKEN",
 			"COOKIE_SIGNING_SECRET",
 			"RESEND_API_KEY",
-			"RESEND_WEBHOOK_SECRET",
-			"OPENCLAW_TOKEN"
+			"RESEND_WEBHOOK_SECRET"
 		]
 	}
 }

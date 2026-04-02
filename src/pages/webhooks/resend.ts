@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { verifyResendWebhook, extractEmailFields } from '../../lib/server/resend-webhook';
 import { parseSenderAllowList, isSenderAllowed } from '../../lib/server/sender-allowlist';
-import { dispatchToAgent } from '../../lib/server/agent-dispatch';
+import { processEmail } from '../../lib/server/email-processor';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
@@ -75,14 +75,14 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  // 10. Dispatch to OpenClaw waymark agent
-  const dispatchResult = await dispatchToAgent(
-    { svixId, sender, recipient, subject, emailId },
-    { OPENCLAW_TOKEN: env.OPENCLAW_TOKEN, OPENCLAW_HOOK_URL: env.OPENCLAW_HOOK_URL },
+  // 10. Parse email with Workers AI and update the matching trip
+  const result = await processEmail(
+    { emailId, sender, subject },
+    { AI: env.AI, RESEND_API_KEY: env.RESEND_API_KEY, TRIPS: env.TRIPS },
   );
 
   console.log(
-    `[resend-webhook] svix-id=${svixId ?? 'unknown'} email_id=${emailId} sender=${sender} recipient=${recipient} dispatch=${dispatchResult.status}`,
+    `[resend-webhook] svix-id=${svixId ?? 'unknown'} email_id=${emailId} sender=${sender} recipient=${recipient} process=${result.status}`,
   );
 
   // 11. Mark as processed in KV
@@ -92,7 +92,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  return new Response(JSON.stringify({ ok: true, dispatch: dispatchResult.status }), {
+  return new Response(JSON.stringify({ ok: true, process: result.status, tripId: result.tripId }), {
     status: 200,
     headers: JSON_HEADERS,
   });
