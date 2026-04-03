@@ -1,0 +1,79 @@
+---
+import { env } from 'cloudflare:workers';
+import { requireAdminSession } from '../../../lib/admin-auth';
+import { listTrips } from '../../../lib/kv';
+import TripLayout from '../../../layouts/TripLayout.astro';
+
+const redirect = await requireAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
+if (redirect) return redirect;
+
+const trips = await listTrips(env.TRIPS);
+// Sort most-recently-updated first
+trips.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+function getStatus(startDate: string, endDate: string): 'upcoming' | 'live' | 'completed' {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today < startDate) return 'upcoming';
+  if (today > endDate) return 'completed';
+  return 'live';
+}
+
+const statusClass = {
+  upcoming: 'bg-blue-900/40 text-blue-300',
+  live: 'bg-green-900/40 text-green-300',
+  completed: 'bg-gray-800 text-gray-400',
+} as const;
+---
+<TripLayout title="Admin — Trips">
+  <div class="max-w-3xl mx-auto px-4 py-10">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold">All Trips</h1>
+      <div class="flex items-center gap-3">
+        <a
+          href="/admin/trips/new"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          + New Trip
+        </a>
+        <form method="POST" action="/api/admin/auth/logout">
+          <button
+            type="submit"
+            class="px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+          >
+            Log out
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {trips.length === 0 ? (
+      <p class="text-[var(--color-text-secondary)]">
+        No trips yet.{' '}
+        <a href="/admin/trips/new" class="text-blue-400 hover:underline">Create one</a>.
+      </p>
+    ) : (
+      <div class="flex flex-col gap-2">
+        {trips.map((trip) => {
+          const status = getStatus(trip.startDate, trip.endDate);
+          return (
+            <a
+              href={`/admin/trips/${trip.id}`}
+              class="flex items-center justify-between p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-blue-500 transition-colors"
+            >
+              <div class="min-w-0">
+                <div class="font-medium truncate">{trip.title}</div>
+                <div class="text-sm text-[var(--color-text-secondary)] mt-0.5">
+                  {trip.startDate} – {trip.endDate}
+                  <span class="font-mono text-xs ml-2 opacity-50">{trip.id}</span>
+                </div>
+              </div>
+              <span class={`ml-4 shrink-0 text-xs px-2 py-0.5 rounded-full ${statusClass[status]}`}>
+                {status}
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</TripLayout>
