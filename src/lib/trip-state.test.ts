@@ -399,4 +399,20 @@ describe('getRentalCarItemsForDay', () => {
     expect(items.some(i => i._legType === 'pickup')).toBe(true);
     expect(items.some(i => i._legType === 'dropoff')).toBe(true);
   });
+
+  it('same-day rental with cost — _costPerDay is undefined (days=0 makes per-day meaningless)', () => {
+    const rental = makeRentalCar({ pickupDate: '2026-03-22', dropoffDate: '2026-03-22', cost: 100 });
+    const items = getRentalCarItemsForDay([rental], '2026-03-22');
+    const pickup = items.find(i => i._legType === 'pickup');
+    expect(pickup?.cost).toBe(100);
+    expect(pickup?._costPerDay).toBeUndefined();
+  });
+
+  it('carClass and notes both present — notes shows class then notes', () => {
+    const items = getRentalCarItemsForDay(
+      [makeRentalCar({ carClass: 'SUV', notes: 'GPS included' })],
+      '2026-03-22',
+    );
+    expect(items.find(i => i._legType === 'pickup')?.notes).toBe('Class: SUV\nGPS included');
+  });
 });
