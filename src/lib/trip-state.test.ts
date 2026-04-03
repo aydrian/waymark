@@ -6,8 +6,9 @@ import {
   getCurrentDay,
   getCurrentDayNumber,
   getVisibleDays,
+  getTransportItemsForDay,
 } from './trip-state';
-import type { Itinerary, Day } from '../types/itinerary';
+import type { Itinerary, Day, TransportLeg } from '../types/itinerary';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -277,5 +278,39 @@ describe('getVisibleDays', () => {
     expect(days).toHaveLength(1);
     expect(days[0].dayNumber).toBe(5);
     expect(filter).toBe('today');
+  });
+});
+
+describe('getTransportItemsForDay cost forwarding', () => {
+  const leg: TransportLeg = {
+    id: 'leg1',
+    type: 'flight',
+    title: 'CDG → FCO',
+    status: 'booked',
+    departureDate: '2026-03-22',
+    departureTime: '08:00',
+    departureTimezone: 'Europe/Paris',
+    arrivalDate: '2026-03-22',
+    arrivalTime: '10:10',
+    arrivalTimezone: 'Europe/Rome',
+    cost: 210,
+  };
+
+  it('puts cost on the departure item', () => {
+    const items = getTransportItemsForDay([leg], '2026-03-22');
+    const departure = items.find(i => i._legType === 'departure');
+    expect(departure?.cost).toBe(210);
+  });
+
+  it('does not put cost on the transit item', () => {
+    const items = getTransportItemsForDay([leg], '2026-03-22');
+    const transit = items.find(i => i._legType === 'transit');
+    expect(transit?.cost).toBeUndefined();
+  });
+
+  it('does not put cost on the arrival item', () => {
+    const items = getTransportItemsForDay([leg], '2026-03-22');
+    const arrival = items.find(i => i._legType === 'arrival');
+    expect(arrival?.cost).toBeUndefined();
   });
 });

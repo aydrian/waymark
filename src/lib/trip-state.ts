@@ -226,6 +226,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
         vendor: leg.vendor,
         confirmationNumber: leg.confirmationNumber,
         notes: noteParts || undefined,
+        cost: leg.cost,
         _legType: 'departure',
         _transportType: leg.type,
         _tzAbbr: depTzAbbr,
