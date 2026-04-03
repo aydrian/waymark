@@ -24,6 +24,8 @@ const icon = (() => {
   if (gi._legType === 'arrival' && gi._transportType) return ARRIVAL_ICONS[gi._transportType] ?? '🛬';
   if (gi._legType === 'transit' && gi._transportType === 'flight') return '✈️';
   if (gi._legType === 'transit') return '🔄';
+  if (gi._legType === 'pickup') return '🚗';
+  if (gi._legType === 'dropoff') return '🏁';
   return icons[item.type] ?? '📌';
 })();
 
@@ -84,7 +86,9 @@ const mapsUrl = (() => {
         <p class="text-xs text-[var(--color-text-secondary)] mt-1 whitespace-pre-wrap">{item.notes}</p>
       )}
       {item.cost != null && (
-        <p class="text-xs text-[var(--color-text-muted)] mt-0.5">Cost: {item.cost.toLocaleString()}</p>
+        <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+          Cost: {item.cost.toLocaleString()}{gi._costPerDay != null ? ` · ${gi._costPerDay.toLocaleString()}/day` : ''}
+        </p>
       )}
     </div>
   </article>
