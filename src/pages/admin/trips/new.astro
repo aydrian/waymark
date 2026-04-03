@@ -1,0 +1,210 @@
+---
+import { env } from 'cloudflare:workers';
+import { requireAdminSession } from '../../../lib/admin-auth';
+import TripLayout from '../../../layouts/TripLayout.astro';
+
+const redirect = await requireAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
+if (redirect) return redirect;
+
+// Generate an 8-char lowercase alphanumeric ID server-side
+function generateTripId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(bytes)
+    .map(b => b.toString(36).padStart(2, '0'))
+    .join('')
+    .slice(0, 8)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '0')
+    .slice(0, 8);
+}
+
+const newId = generateTripId();
+const today = new Date().toISOString().slice(0, 10);
+
+const emptyComplexData = {
+  days: [],
+  stays: [],
+  transportLegs: [],
+  pois: [],
+  map: null,
+  notes: null,
+};
+---
+<TripLayout title="Admin — New Trip">
+  <div class="max-w-2xl mx-auto px-4 py-10">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/admin/trips" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+          ← Trips
+        </a>
+        <h1 class="text-xl font-bold">New Trip</h1>
+        <span class="font-mono text-xs text-[var(--color-text-secondary)]">{newId}</span>
+      </div>
+      <form method="POST" action="/api/admin/auth/logout">
+        <button type="submit" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Log out</button>
+      </form>
+    </div>
+
+    <form id="new-trip-form" class="flex flex-col gap-4">
+      <input type="hidden" name="id" value={newId} />
+      <input type="hidden" name="updatedAt" value={new Date().toISOString()} />
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Title</label>
+        <input name="title" required placeholder="Paris Spring 2026"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Start Date</label>
+          <input name="startDate" type="date" value={today} required
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">End Date</label>
+          <input name="endDate" type="date" value={today} required
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Timezone</label>
+          <input name="timezone" required placeholder="America/New_York"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Destinations (comma-separated)</label>
+          <input name="destinations" required placeholder="Paris, Lyon"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Travelers (optional)</label>
+          <input name="travelers" placeholder="Alice, Bob"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Summary (optional)</label>
+        <textarea name="summary" rows="2" placeholder="A short trip description…"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+          PIN <span class="text-red-400">*</span> (required — controls trip access)
+        </label>
+        <input name="pin" type="password" required placeholder="Set an access PIN"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+          Days / Stays / Transport / POIs / Map (JSON)
+        </label>
+        <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:200px"></div>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          Create trip
+        </button>
+      </div>
+    </form>
+    <p id="form-status" class="text-sm mt-3 hidden"></p>
+  </div>
+
+  <!-- Pass server data to client via data attributes (define:vars disables ES module bundling) -->
+  <div
+    id="trip-data"
+    data-complex={JSON.stringify(emptyComplexData)}
+    data-trip-id={newId}
+    class="hidden"
+  ></div>
+
+  <script>
+    import { EditorView, basicSetup } from 'codemirror';
+    import { json } from '@codemirror/lang-json';
+
+    const dataEl = document.getElementById('trip-data')!;
+    const complexData = JSON.parse(dataEl.dataset.complex!);
+    const newId = dataEl.dataset.tripId!;
+
+    const complexEditor = new EditorView({
+      doc: JSON.stringify(complexData, null, 2),
+      extensions: [basicSetup, json()],
+      parent: document.getElementById('complex-editor')!,
+    });
+
+    const form = document.getElementById('new-trip-form') as HTMLFormElement;
+    const formStatus = document.getElementById('form-status')!;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
+      submitBtn.disabled = true;
+
+      const fd = new FormData(form);
+
+      let complexParsed;
+      try {
+        complexParsed = JSON.parse(complexEditor.state.doc.toString());
+      } catch {
+        formStatus.textContent = 'Complex data JSON is invalid — fix syntax errors before saving.';
+        formStatus.className = 'text-sm text-red-400';
+        formStatus.classList.remove('hidden');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const pin = fd.get('pin') as string;
+      if (!pin) {
+        formStatus.textContent = 'PIN is required.';
+        formStatus.className = 'text-sm text-red-400';
+        formStatus.classList.remove('hidden');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const payload = {
+        id: fd.get('id'),
+        title: fd.get('title'),
+        startDate: fd.get('startDate'),
+        endDate: fd.get('endDate'),
+        timezone: fd.get('timezone'),
+        destinations: (fd.get('destinations') as string).split(',').map(s => s.trim()).filter(Boolean),
+        travelers: fd.get('travelers') ? (fd.get('travelers') as string).split(',').map(s => s.trim()).filter(Boolean) : [],
+        summary: fd.get('summary') || undefined,
+        updatedAt: new Date().toISOString(),
+        pin,
+        ...complexParsed,
+      };
+
+      try {
+        const res = await fetch('/api/admin/trips/upsert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin',
+        });
+        const data = await res.json() as { ok?: boolean; error?: string; issues?: unknown[] };
+        if (data.ok) {
+          window.location.href = `/admin/trips/${newId}`;
+        } else {
+          formStatus.textContent = JSON.stringify(data.issues ?? data.error ?? 'Save failed');
+          formStatus.className = 'text-sm text-red-400';
+          formStatus.classList.remove('hidden');
+          submitBtn.disabled = false;
+        }
+      } catch {
+        formStatus.textContent = 'Network error';
+        formStatus.className = 'text-sm text-red-400';
+        formStatus.classList.remove('hidden');
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</TripLayout>

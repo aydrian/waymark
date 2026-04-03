@@ -1,0 +1,312 @@
+---
+import { env } from 'cloudflare:workers';
+import { requireAdminSession } from '../../../lib/admin-auth';
+import { getTrip } from '../../../lib/kv';
+import TripLayout from '../../../layouts/TripLayout.astro';
+
+const redirect = await requireAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
+if (redirect) return redirect;
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/admin/trips');
+
+const trip = await getTrip(env.TRIPS, id);
+if (!trip) {
+  return new Response('Trip not found', { status: 404 });
+}
+
+const complexData = {
+  days: trip.days,
+  stays: trip.stays ?? [],
+  transportLegs: trip.transportLegs ?? [],
+  pois: trip.pois ?? [],
+  map: trip.map ?? null,
+  notes: trip.notes ?? null,
+};
+---
+<TripLayout title={`Admin — ${trip.title}`}>
+  <div class="max-w-2xl mx-auto px-4 py-10">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/admin/trips" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+          ← Trips
+        </a>
+        <h1 class="text-xl font-bold">{trip.title}</h1>
+        <span class="font-mono text-xs text-[var(--color-text-secondary)]">{trip.id}</span>
+      </div>
+      <form method="POST" action="/api/admin/auth/logout">
+        <button type="submit" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Log out</button>
+      </form>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-[var(--color-border)] mb-6">
+      <button id="tab-info" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-400">Info</button>
+      <button id="tab-raw" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)]">Raw JSON</button>
+    </div>
+
+    <!-- Info Tab -->
+    <div id="panel-info">
+      <form id="info-form" class="flex flex-col gap-4">
+        <input type="hidden" name="id" value={trip.id} />
+        <input type="hidden" name="pinSalt" value={trip.pinSalt} />
+        <input type="hidden" name="pinHash" value={trip.pinHash} />
+        <input type="hidden" name="updatedAt" value={new Date().toISOString()} />
+
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Title</label>
+          <input name="title" value={trip.title} required
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Start Date</label>
+            <input name="startDate" type="date" value={trip.startDate} required
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">End Date</label>
+            <input name="endDate" type="date" value={trip.endDate} required
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Timezone</label>
+            <input name="timezone" value={trip.timezone} required placeholder="America/New_York"
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Destinations (comma-separated)</label>
+            <input name="destinations" value={trip.destinations.join(', ')} required
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Travelers (optional, comma-separated)</label>
+            <input name="travelers" value={(trip.travelers ?? []).join(', ')}
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Summary (optional)</label>
+          <textarea name="summary" rows="2"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          >{trip.summary ?? ''}</textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            New PIN (leave blank to keep existing)
+          </label>
+          <input name="pin" type="password" placeholder="••••••"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            Days / Stays / Transport / POIs / Map (JSON)
+          </label>
+          <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:260px"></div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button type="submit"
+            class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+            Save changes
+          </button>
+          <button type="button" id="delete-btn"
+            class="text-sm text-red-400 hover:text-red-300 transition-colors">
+            Delete trip…
+          </button>
+        </div>
+      </form>
+      <p id="info-status" class="text-sm mt-3 hidden"></p>
+    </div>
+
+    <!-- Raw JSON Tab -->
+    <div id="panel-raw" class="hidden">
+      <div id="raw-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:500px"></div>
+      <div class="flex items-center gap-3 mt-4">
+        <button id="raw-save-btn"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          Save JSON
+        </button>
+        <p id="raw-status" class="text-sm hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pass server data to client via data attributes (define:vars disables ES module bundling) -->
+  <div
+    id="trip-data"
+    data-complex={JSON.stringify(complexData)}
+    data-trip-json={JSON.stringify(trip, null, 2)}
+    data-trip-id={trip.id}
+    class="hidden"
+  ></div>
+
+  <script>
+    import { EditorView, basicSetup } from 'codemirror';
+    import { json } from '@codemirror/lang-json';
+
+    const dataEl = document.getElementById('trip-data')!;
+    const complexData = JSON.parse(dataEl.dataset.complex!);
+    const tripJson = dataEl.dataset.tripJson!;
+    const tripId = dataEl.dataset.tripId!;
+
+    // --- Tab switching ---
+    const tabInfo = document.getElementById('tab-info')!;
+    const tabRaw = document.getElementById('tab-raw')!;
+    const panelInfo = document.getElementById('panel-info')!;
+    const panelRaw = document.getElementById('panel-raw')!;
+
+    function activateTab(which: string) {
+      const isInfo = which === 'info';
+      tabInfo.classList.toggle('border-blue-500', isInfo);
+      tabInfo.classList.toggle('text-blue-400', isInfo);
+      tabInfo.classList.toggle('border-transparent', !isInfo);
+      tabInfo.classList.toggle('text-[var(--color-text-secondary)]', !isInfo);
+      tabRaw.classList.toggle('border-blue-500', !isInfo);
+      tabRaw.classList.toggle('text-blue-400', !isInfo);
+      tabRaw.classList.toggle('border-transparent', isInfo);
+      tabRaw.classList.toggle('text-[var(--color-text-secondary)]', isInfo);
+      panelInfo.classList.toggle('hidden', !isInfo);
+      panelRaw.classList.toggle('hidden', isInfo);
+    }
+
+    tabInfo.addEventListener('click', () => activateTab('info'));
+    tabRaw.addEventListener('click', () => activateTab('raw'));
+
+    // --- CodeMirror editors ---
+    const complexEditor = new EditorView({
+      doc: JSON.stringify(complexData, null, 2),
+      extensions: [basicSetup, json()],
+      parent: document.getElementById('complex-editor')!,
+    });
+
+    const rawEditor = new EditorView({
+      doc: tripJson,
+      extensions: [basicSetup, json()],
+      parent: document.getElementById('raw-editor')!,
+    });
+
+    // --- Info form save ---
+    async function saveTrip(payload: unknown) {
+      const res = await fetch('/api/admin/trips/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'same-origin',
+      });
+      return res.json();
+    }
+
+    const infoForm = document.getElementById('info-form') as HTMLFormElement;
+    const infoStatus = document.getElementById('info-status')!;
+
+    infoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(infoForm);
+      const submitBtn = infoForm.querySelector('button[type=submit]') as HTMLButtonElement;
+      submitBtn.disabled = true;
+
+      let complexParsed;
+      try {
+        complexParsed = JSON.parse(complexEditor.state.doc.toString());
+      } catch {
+        infoStatus.textContent = 'Complex data JSON is invalid — fix syntax errors before saving.';
+        infoStatus.className = 'text-sm mt-3 text-red-400';
+        infoStatus.classList.remove('hidden');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const pin = fd.get('pin') as string;
+      const payload = {
+        id: fd.get('id'),
+        title: fd.get('title'),
+        startDate: fd.get('startDate'),
+        endDate: fd.get('endDate'),
+        timezone: fd.get('timezone'),
+        destinations: (fd.get('destinations') as string).split(',').map(s => s.trim()).filter(Boolean),
+        travelers: fd.get('travelers') ? (fd.get('travelers') as string).split(',').map(s => s.trim()).filter(Boolean) : [],
+        summary: fd.get('summary') || undefined,
+        pinSalt: fd.get('pinSalt'),
+        pinHash: fd.get('pinHash'),
+        updatedAt: new Date().toISOString(),
+        ...complexParsed,
+        ...(pin ? { pin } : {}),
+      };
+
+      try {
+        const data = await saveTrip(payload) as { ok?: boolean; error?: string };
+        if (data.ok) {
+          infoStatus.textContent = 'Saved.';
+          infoStatus.className = 'text-sm mt-3 text-green-400';
+        } else {
+          infoStatus.textContent = data.error ?? 'Save failed';
+          infoStatus.className = 'text-sm mt-3 text-red-400';
+        }
+      } catch {
+        infoStatus.textContent = 'Network error';
+        infoStatus.className = 'text-sm mt-3 text-red-400';
+      }
+      infoStatus.classList.remove('hidden');
+      submitBtn.disabled = false;
+    });
+
+    // --- Raw JSON save ---
+    const rawSaveBtn = document.getElementById('raw-save-btn') as HTMLButtonElement;
+    const rawStatus = document.getElementById('raw-status')!;
+
+    rawSaveBtn.addEventListener('click', async () => {
+      rawSaveBtn.disabled = true;
+      let parsed;
+      try {
+        parsed = JSON.parse(rawEditor.state.doc.toString());
+      } catch {
+        rawStatus.textContent = 'Invalid JSON — fix syntax errors before saving.';
+        rawStatus.className = 'text-sm text-red-400';
+        rawStatus.classList.remove('hidden');
+        rawSaveBtn.disabled = false;
+        return;
+      }
+      try {
+        const data = await saveTrip(parsed) as { ok?: boolean; error?: string; issues?: unknown[] };
+        if (data.ok) {
+          rawStatus.textContent = 'Saved.';
+          rawStatus.className = 'text-sm text-green-400';
+        } else {
+          rawStatus.textContent = JSON.stringify(data.issues ?? data.error ?? 'Save failed');
+          rawStatus.className = 'text-sm text-red-400';
+        }
+      } catch {
+        rawStatus.textContent = 'Network error';
+        rawStatus.className = 'text-sm text-red-400';
+      }
+      rawStatus.classList.remove('hidden');
+      rawSaveBtn.disabled = false;
+    });
+
+    // --- Delete ---
+    const deleteBtn = document.getElementById('delete-btn')!;
+    deleteBtn.addEventListener('click', async () => {
+      if (!confirm(`Delete trip "${tripId}"? This cannot be undone.`)) return;
+      const res = await fetch('/api/admin/trips/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tripId }),
+        credentials: 'same-origin',
+      });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (data.ok) {
+        window.location.href = '/admin/trips';
+      } else {
+        alert(data.error ?? 'Delete failed');
+      }
+    });
+  </script>
+</TripLayout>
