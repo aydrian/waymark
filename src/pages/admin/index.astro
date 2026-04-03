@@ -1,0 +1,69 @@
+---
+import { env } from 'cloudflare:workers';
+import { getAdminSession } from '../../lib/admin-auth';
+import TripLayout from '../../layouts/TripLayout.astro';
+
+if (await getAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET)) {
+  return Astro.redirect('/admin/trips');
+}
+
+const hasCredential = Boolean(await env.TRIPS.get('admin:credential', 'text'));
+if (!hasCredential) {
+  return Astro.redirect('/admin/setup');
+}
+---
+<TripLayout title="Admin Login">
+  <div class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-sm p-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+      <div class="text-center mb-8">
+        <div class="text-5xl mb-3">🗺️</div>
+        <h1 class="text-2xl font-bold">Waymark Admin</h1>
+        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">Authenticate to continue</p>
+      </div>
+      <button
+        id="signin-btn"
+        class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+      >
+        Sign in with passkey
+      </button>
+      <p id="error-msg" class="text-red-400 text-sm mt-3 text-center hidden"></p>
+    </div>
+  </div>
+  <script>
+    import { startAuthentication } from '@simplewebauthn/browser';
+
+    const btn = document.getElementById('signin-btn') as HTMLButtonElement;
+    const errMsg = document.getElementById('error-msg') as HTMLParagraphElement;
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Authenticating…';
+      errMsg.classList.add('hidden');
+      try {
+        const optRes = await fetch('/api/admin/auth/login-options', { method: 'POST' });
+        if (!optRes.ok) throw new Error((await optRes.json() as { error: string }).error);
+        const { options, challengeId } = await optRes.json() as { options: unknown; challengeId: string };
+
+        const response = await startAuthentication({ optionsJSON: options as Parameters<typeof startAuthentication>[0]['optionsJSON'] });
+
+        const verifyRes = await fetch('/api/admin/auth/login-verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ challengeId, response }),
+          credentials: 'same-origin',
+        });
+        const data = await verifyRes.json() as { ok?: boolean; error?: string };
+        if (data.ok) {
+          window.location.href = '/admin/trips';
+        } else {
+          throw new Error(data.error ?? 'Authentication failed');
+        }
+      } catch (e) {
+        errMsg.textContent = e instanceof Error ? e.message : 'Authentication failed';
+        errMsg.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Sign in with passkey';
+      }
+    });
+  </script>
+</TripLayout>

@@ -1,0 +1,66 @@
+---
+import { env } from 'cloudflare:workers';
+import TripLayout from '../../layouts/TripLayout.astro';
+
+const hasCredential = Boolean(await env.TRIPS.get('admin:credential', 'text'));
+if (hasCredential) {
+  return Astro.redirect('/admin');
+}
+---
+<TripLayout title="Admin Setup">
+  <div class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-sm p-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+      <div class="text-center mb-8">
+        <div class="text-5xl mb-3">🔑</div>
+        <h1 class="text-2xl font-bold">Set up your passkey</h1>
+        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">
+          One-time setup. Uses your device biometric or security key.
+        </p>
+      </div>
+      <button
+        id="register-btn"
+        class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+      >
+        Register passkey
+      </button>
+      <p id="error-msg" class="text-red-400 text-sm mt-3 text-center hidden"></p>
+    </div>
+  </div>
+  <script>
+    import { startRegistration } from '@simplewebauthn/browser';
+
+    const btn = document.getElementById('register-btn') as HTMLButtonElement;
+    const errMsg = document.getElementById('error-msg') as HTMLParagraphElement;
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Registering…';
+      errMsg.classList.add('hidden');
+      try {
+        const optRes = await fetch('/api/admin/auth/register-options', { method: 'POST' });
+        if (!optRes.ok) throw new Error((await optRes.json() as { error: string }).error);
+        const { options, challengeId } = await optRes.json() as { options: unknown; challengeId: string };
+
+        const response = await startRegistration({ optionsJSON: options as Parameters<typeof startRegistration>[0]['optionsJSON'] });
+
+        const verifyRes = await fetch('/api/admin/auth/register-verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ challengeId, response }),
+          credentials: 'same-origin',
+        });
+        const data = await verifyRes.json() as { ok?: boolean; error?: string };
+        if (data.ok) {
+          window.location.href = '/admin/trips';
+        } else {
+          throw new Error(data.error ?? 'Registration failed');
+        }
+      } catch (e) {
+        errMsg.textContent = e instanceof Error ? e.message : 'Registration failed';
+        errMsg.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Register passkey';
+      }
+    });
+  </script>
+</TripLayout>
