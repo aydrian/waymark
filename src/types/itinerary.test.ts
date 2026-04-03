@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'bun:test';
-import { PoiCategorySchema, PlaceOfInterestSchema, ItinerarySchema } from './itinerary';
+import {
+  PoiCategorySchema, PlaceOfInterestSchema, ItinerarySchema,
+  HotelStaySchema, TransportLegSchema, TripItemSchema,
+} from './itinerary';
 
 describe('PoiCategorySchema', () => {
   it('accepts all valid categories', () => {
@@ -86,5 +89,75 @@ describe('ItinerarySchema pois field', () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.pois).toHaveLength(1);
+  });
+});
+
+describe('HotelStaySchema cost field', () => {
+  const baseStay = {
+    id: 'h1',
+    title: 'Hotel Paris',
+    status: 'booked',
+    checkinDate: '2026-03-22',
+    checkoutDate: '2026-03-25',
+  };
+
+  it('accepts a stay without cost', () => {
+    expect(HotelStaySchema.safeParse(baseStay).success).toBe(true);
+  });
+
+  it('accepts a stay with cost', () => {
+    expect(HotelStaySchema.safeParse({ ...baseStay, cost: 450 }).success).toBe(true);
+  });
+
+  it('rejects negative cost', () => {
+    expect(HotelStaySchema.safeParse({ ...baseStay, cost: -10 }).success).toBe(false);
+  });
+});
+
+describe('TransportLegSchema cost field', () => {
+  const baseLeg = {
+    id: 'tl1',
+    type: 'flight',
+    title: 'CDG → FCO',
+    status: 'booked',
+    departureDate: '2026-03-22',
+    departureTime: '08:00',
+    departureTimezone: 'Europe/Paris',
+    arrivalDate: '2026-03-22',
+    arrivalTime: '10:10',
+    arrivalTimezone: 'Europe/Rome',
+  };
+
+  it('accepts a leg without cost', () => {
+    expect(TransportLegSchema.safeParse(baseLeg).success).toBe(true);
+  });
+
+  it('accepts a leg with cost', () => {
+    expect(TransportLegSchema.safeParse({ ...baseLeg, cost: 210 }).success).toBe(true);
+  });
+
+  it('rejects negative cost', () => {
+    expect(TransportLegSchema.safeParse({ ...baseLeg, cost: -5 }).success).toBe(false);
+  });
+});
+
+describe('TripItemSchema cost field', () => {
+  const baseItem = {
+    id: 'i1',
+    type: 'activity',
+    title: 'Eiffel Tower Tour',
+    status: 'booked',
+  };
+
+  it('accepts an item without cost', () => {
+    expect(TripItemSchema.safeParse(baseItem).success).toBe(true);
+  });
+
+  it('accepts an item with cost', () => {
+    expect(TripItemSchema.safeParse({ ...baseItem, cost: 29 }).success).toBe(true);
+  });
+
+  it('rejects negative cost', () => {
+    expect(TripItemSchema.safeParse({ ...baseItem, cost: -1 }).success).toBe(false);
   });
 });

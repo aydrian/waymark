@@ -24,6 +24,7 @@ export const HotelStaySchema = z.object({
   vendor: z.string().optional(),
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
+  cost: z.number().nonnegative().optional(),
 });
 
 export const PoiCategorySchema = z.enum([
@@ -68,6 +69,7 @@ export const TransportLegSchema = z.object({
   confirmationNumber: z.string().optional(),
   seat: z.string().optional(),
   notes: z.string().optional(),
+  cost: z.number().nonnegative().optional(),
 });
 
 export const TripItemSchema = z.object({
@@ -84,6 +86,7 @@ export const TripItemSchema = z.object({
   vendor: z.string().optional(),
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
+  cost: z.number().nonnegative().optional(),
 });
 
 export const DaySchema = z.object({
