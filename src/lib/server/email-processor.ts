@@ -294,7 +294,7 @@ export async function processEmail(
       notes: aiOutput.data.notes,
     };
     trip.rentalCars = [...(trip.rentalCars ?? []), rental];
-  } else {
+  } else if (aiOutput.type === 'hotel_stay') {
     const stay = {
       id: crypto.randomUUID(),
       title: aiOutput.data.title,
@@ -310,6 +310,9 @@ export async function processEmail(
       notes: aiOutput.data.notes,
     };
     trip.stays = [...(trip.stays ?? []), stay];
+  } else {
+    console.error('[email-processor] Unhandled AI output type:', (aiOutput as { type: string }).type);
+    return { ok: false, status: 'ai_error' };
   }
 
   trip.updatedAt = new Date().toISOString();

@@ -27,6 +27,7 @@ const FULL_TRIP = {
   days: [],
   stays: [],
   transportLegs: [],
+  rentalCars: [],
   pinSalt: 'salt',
   pinHash: 'hash',
   updatedAt: '2026-01-01T00:00:00.000Z',
