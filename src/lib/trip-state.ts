@@ -1,10 +1,11 @@
-import type { Itinerary, Day, HotelStay, TripItem, TransportLeg } from '../types/itinerary';
+import type { Itinerary, Day, HotelStay, TripItem, TransportLeg, RentalCarReservation } from '../types/itinerary';
 
 export type GeneratedItem = TripItem & {
-  _legType?: 'departure' | 'arrival' | 'transit';
+  _legType?: 'departure' | 'arrival' | 'transit' | 'pickup' | 'dropoff';
   _transportType?: 'flight' | 'train' | 'ferry' | 'bus' | 'other';
   _tzAbbr?: string;
   _sortMs?: number; // UTC ms timestamp — used for correct ordering across timezones
+  _costPerDay?: number; // rental cars: cost per day for display
 };
 
 /**
@@ -323,6 +324,77 @@ export function getTransportMapItems(legs: TransportLeg[], date: string | null):
       }
     }
   }
+  return items;
+}
+
+/**
+ * Generates synthetic timeline items for a given date from a list of RentalCarReservation entries.
+ * Each reservation produces a pickup item (on pickupDate) and a dropoff item (on dropoffDate).
+ */
+export function getRentalCarItemsForDay(
+  rentals: RentalCarReservation[],
+  date: string,
+): GeneratedItem[] {
+  const items: GeneratedItem[] = [];
+
+  for (const rental of rentals) {
+    if (rental.pickupDate === date) {
+      const [pY, pM, pD] = rental.pickupDate.split('-').map(Number);
+      const [dY, dM, dD] = rental.dropoffDate.split('-').map(Number);
+      const days = Math.round(
+        (Date.UTC(dY, dM - 1, dD) - Date.UTC(pY, pM - 1, pD)) / 86400000,
+      );
+      const costPerDay =
+        rental.cost != null && days > 0 ? Math.round(rental.cost / days) : undefined;
+
+      const noteParts = [
+        rental.carClass ? `Class: ${rental.carClass}` : undefined,
+        rental.notes,
+      ].filter(Boolean).join('\n');
+
+      items.push({
+        id: `rental-${rental.id}-pickup`,
+        type: 'transport',
+        title: `${rental.title} — Pick-up`,
+        status: rental.status,
+        startTime: rental.pickupTime,
+        location: rental.pickupLocation,
+        lat: rental.pickupLat,
+        lng: rental.pickupLng,
+        vendor: rental.vendor,
+        confirmationNumber: rental.confirmationNumber,
+        notes: noteParts || undefined,
+        cost: rental.cost,
+        _legType: 'pickup',
+        _tzAbbr: getTimezoneAbbr(rental.pickupTimezone, rental.pickupDate, rental.pickupTime),
+        _sortMs: localDateTimeToMs(rental.pickupDate, rental.pickupTime, rental.pickupTimezone),
+        _costPerDay: costPerDay,
+      });
+    }
+
+    if (rental.dropoffDate === date) {
+      const isOneWay =
+        rental.pickupLocation != null &&
+        rental.dropoffLocation != null &&
+        rental.pickupLocation !== rental.dropoffLocation;
+
+      items.push({
+        id: `rental-${rental.id}-dropoff`,
+        type: 'transport',
+        title: `${rental.title} — Drop-off`,
+        status: rental.status,
+        startTime: rental.dropoffTime,
+        location: rental.dropoffLocation,
+        lat: rental.dropoffLat,
+        lng: rental.dropoffLng,
+        notes: isOneWay ? 'One-way rental' : undefined,
+        _legType: 'dropoff',
+        _tzAbbr: getTimezoneAbbr(rental.dropoffTimezone, rental.dropoffDate, rental.dropoffTime),
+        _sortMs: localDateTimeToMs(rental.dropoffDate, rental.dropoffTime, rental.dropoffTimezone),
+      });
+    }
+  }
+
   return items;
 }
 

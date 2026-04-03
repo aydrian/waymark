@@ -7,8 +7,9 @@ import {
   getCurrentDayNumber,
   getVisibleDays,
   getTransportItemsForDay,
+  getRentalCarItemsForDay,
 } from './trip-state';
-import type { Itinerary, Day, TransportLeg } from '../types/itinerary';
+import type { Itinerary, Day, TransportLeg, RentalCarReservation } from '../types/itinerary';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -312,5 +313,90 @@ describe('getTransportItemsForDay cost forwarding', () => {
     const items = getTransportItemsForDay([leg], '2026-03-22');
     const arrival = items.find(i => i._legType === 'arrival');
     expect(arrival?.cost).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getRentalCarItemsForDay
+// ---------------------------------------------------------------------------
+
+function makeRentalCar(overrides: Partial<RentalCarReservation> = {}): RentalCarReservation {
+  return {
+    id: 'rental1',
+    title: 'Enterprise Compact',
+    status: 'booked',
+    pickupDate: '2026-03-22',
+    pickupTime: '10:00',
+    pickupTimezone: 'America/New_York',
+    dropoffDate: '2026-03-25',
+    dropoffTime: '10:00',
+    dropoffTimezone: 'America/New_York',
+    ...overrides,
+  };
+}
+
+describe('getRentalCarItemsForDay', () => {
+  it('returns pickup item on pickupDate', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar()], '2026-03-22');
+    expect(items).toHaveLength(1);
+    expect(items[0]._legType).toBe('pickup');
+    expect(items[0].title).toBe('Enterprise Compact — Pick-up');
+  });
+
+  it('returns dropoff item on dropoffDate', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar()], '2026-03-25');
+    expect(items).toHaveLength(1);
+    expect(items[0]._legType).toBe('dropoff');
+    expect(items[0].title).toBe('Enterprise Compact — Drop-off');
+  });
+
+  it('returns no items for dates in between', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar()], '2026-03-23');
+    expect(items).toHaveLength(0);
+  });
+
+  it('puts cost on pickup item', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar({ cost: 300 })], '2026-03-22');
+    expect(items.find(i => i._legType === 'pickup')?.cost).toBe(300);
+  });
+
+  it('does not put cost on dropoff item', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar({ cost: 300 })], '2026-03-25');
+    expect(items.find(i => i._legType === 'dropoff')?.cost).toBeUndefined();
+  });
+
+  it('computes _costPerDay on pickup item — 3 days $300 = $100/day', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar({ cost: 300 })], '2026-03-22');
+    expect(items.find(i => i._legType === 'pickup')?._costPerDay).toBe(100);
+  });
+
+  it('_costPerDay is undefined when cost is absent', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar()], '2026-03-22');
+    expect(items.find(i => i._legType === 'pickup')?._costPerDay).toBeUndefined();
+  });
+
+  it('puts carClass in notes on pickup item', () => {
+    const items = getRentalCarItemsForDay([makeRentalCar({ carClass: 'Compact' })], '2026-03-22');
+    expect(items.find(i => i._legType === 'pickup')?.notes).toBe('Class: Compact');
+  });
+
+  it('marks one-way rental in dropoff notes when locations differ', () => {
+    const rental = makeRentalCar({ pickupLocation: 'JFK', dropoffLocation: 'BOS' });
+    const items = getRentalCarItemsForDay([rental], '2026-03-25');
+    expect(items.find(i => i._legType === 'dropoff')?.notes).toBe('One-way rental');
+  });
+
+  it('no one-way note when locations are the same', () => {
+    const rental = makeRentalCar({ pickupLocation: 'CDG', dropoffLocation: 'CDG' });
+    const items = getRentalCarItemsForDay([rental], '2026-03-25');
+    expect(items.find(i => i._legType === 'dropoff')?.notes).toBeUndefined();
+  });
+
+  it('same-day pickup and dropoff — both items returned', () => {
+    const rental = makeRentalCar({ pickupDate: '2026-03-22', dropoffDate: '2026-03-22' });
+    const items = getRentalCarItemsForDay([rental], '2026-03-22');
+    expect(items).toHaveLength(2);
+    expect(items.some(i => i._legType === 'pickup')).toBe(true);
+    expect(items.some(i => i._legType === 'dropoff')).toBe(true);
   });
 });
