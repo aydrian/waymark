@@ -83,6 +83,9 @@ const mapsUrl = (() => {
       {item.notes && (
         <p class="text-xs text-[var(--color-text-secondary)] mt-1 whitespace-pre-wrap">{item.notes}</p>
       )}
+      {item.cost != null && (
+        <p class="text-xs text-[var(--color-text-muted)] mt-0.5">Cost: {item.cost.toLocaleString()}</p>
+      )}
     </div>
   </article>
 )}
