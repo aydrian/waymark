@@ -1,6 +1,6 @@
 {
 	"name": "waymark",
-	"compatibility_date": "2026-03-25",
+	"compatibility_date": "2026-03-17",
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
@@ -26,7 +26,8 @@
 		}
 	],
 	"ai": {
-		"binding": "AI"
+		"binding": "AI",
+		"remote": true
 	},
 	"vars": {
 		"RESEND_SENDER_ALLOWLIST": "aydrian@gmail.com,aydrian.howard@fora.travel"
