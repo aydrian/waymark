@@ -1,10 +1,10 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { requireAdminAuth } from '../../../../lib/auth';
+import { requireAdminAccess } from '../../../../lib/admin-auth';
 import { getTrip } from '../../../../lib/kv';
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const authError = requireAdminAuth(request, env.ADMIN_API_TOKEN);
+  const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
   if (authError) return authError;
 
   const id = params.id;

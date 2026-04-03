@@ -1,13 +1,13 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { requireAdminAuth } from '../../../../../../lib/auth';
+import { requireAdminAccess } from '../../../../../../lib/admin-auth';
 import { getTrip, putTrip } from '../../../../../../lib/kv';
 import { PlaceOfInterestSchema } from '../../../../../../types/itinerary';
 
 const UpdatePoiSchema = PlaceOfInterestSchema.omit({ id: true }).partial();
 
 export const PUT: APIRoute = async ({ params, request }) => {
-  const authError = requireAdminAuth(request, env.ADMIN_API_TOKEN);
+  const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
   if (authError) return authError;
 
   const { id, poiId } = params as { id: string; poiId: string };
@@ -67,7 +67,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
-  const authError = requireAdminAuth(request, env.ADMIN_API_TOKEN);
+  const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
   if (authError) return authError;
 
   const { id, poiId } = params as { id: string; poiId: string };

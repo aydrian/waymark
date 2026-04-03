@@ -1,13 +1,13 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { requireAdminAuth } from '../../../../lib/auth';
+import { requireAdminAccess } from '../../../../lib/admin-auth';
 import { deleteTrip } from '../../../../lib/kv';
 import { z } from 'zod';
 
 const DeleteBodySchema = z.object({ id: z.string() });
 
 export const POST: APIRoute = async ({ request }) => {
-  const authError = requireAdminAuth(request, env.ADMIN_API_TOKEN);
+  const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
   if (authError) return authError;
 
   let body: unknown;
