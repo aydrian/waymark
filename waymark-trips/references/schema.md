@@ -23,6 +23,7 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `updatedAt` | string | yes | ISO 8601 datetime, e.g. `2025-09-10T14:30:00.000Z` |
 | `stays` | HotelStay[] | no | Array of hotel stays (see below). Do NOT add `type: 'hotel'` items to day `items` — check-in/checkout timeline entries are generated at render time from this array. |
 | `transportLegs` | TransportLeg[] | no | Array of transport legs (see below). Preferred over `type: 'transport'` TripItems for flights, trains, ferries, and buses. Departure/arrival/in-transit entries are generated at render time. |
+| `rentalCars` | RentalCarReservation[] | no | Array of rental car reservations (see below). Pickup and dropoff timeline entries are generated at render time from this array. |
 | `map` | object | no | `{ centerLat?, centerLng?, zoom? }` — all optional numbers |
 
 ---
@@ -61,6 +62,7 @@ Represents a multi-night hotel stay. Stored at the itinerary level (not inside a
 | `vendor` | string | no | Hotel chain name |
 | `confirmationNumber` | string | no | Booking reference |
 | `notes` | string | no | Room type, inclusions, special requests |
+| `cost` | number | no | Non-negative. Total cost of the stay (e.g. full room charge) |
 
 ---
 
@@ -92,6 +94,36 @@ Represents a point-to-point transport leg (flight, train, ferry, bus). Stored at
 | `confirmationNumber` | string | no | Booking reference |
 | `seat` | string | no | Seat assignment, e.g. `"12A"` or `"41/42"` |
 | `notes` | string | no | Free text |
+| `cost` | number | no | Non-negative. Total fare for this leg |
+
+---
+
+## RentalCarReservation
+
+Represents a rental car booking. Stored at the itinerary level in `rentalCars` (same pattern as `stays` and `transportLegs`). The app synthesizes a 🚗 pickup event on `pickupDate` and a dropoff event on `dropoffDate` automatically — do not add manual `TripItem`s for the pickup/dropoff.
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `id` | string | yes | Unique within the trip |
+| `title` | string | yes | e.g. `"Hertz — Rome pickup"` |
+| `status` | enum | yes | See status values below |
+| `pickupDate` | string | yes | YYYY-MM-DD |
+| `pickupTime` | string | yes | HH:MM (24-hour, local time) |
+| `pickupTimezone` | string | yes | IANA timezone of pickup location |
+| `pickupLocation` | string | no | Human-readable name, e.g. `"Rome Fiumicino Airport (FCO)"` |
+| `pickupLat` | number | no | WGS84 latitude |
+| `pickupLng` | number | no | WGS84 longitude |
+| `dropoffDate` | string | yes | YYYY-MM-DD |
+| `dropoffTime` | string | yes | HH:MM (24-hour, local time) |
+| `dropoffTimezone` | string | yes | IANA timezone of dropoff location |
+| `dropoffLocation` | string | no | Human-readable name |
+| `dropoffLat` | number | no | WGS84 latitude |
+| `dropoffLng` | number | no | WGS84 longitude |
+| `carClass` | string | no | e.g. `"Economy"`, `"Compact"`, `"SUV"`, `"Full-size"` |
+| `vendor` | string | no | Rental company, e.g. `"Hertz"`, `"Enterprise"`, `"Avis"` |
+| `confirmationNumber` | string | no | Booking reference |
+| `notes` | string | no | Free text |
+| `cost` | number | no | Non-negative. Total cost of the rental — the UI displays this as total + per-day breakdown (e.g. `$450 · $75/day`) |
 
 ---
 
@@ -112,6 +144,7 @@ Represents a point-to-point transport leg (flight, train, ferry, bus). Stored at
 | `vendor` | string | no | Airline, hotel chain, restaurant name, etc. |
 | `confirmationNumber` | string | no | Booking reference or confirmation code |
 | `notes` | string | no | Free text |
+| `cost` | number | no | Non-negative. Cost of this activity, transfer, or item |
 
 ### Item type enum values
 
