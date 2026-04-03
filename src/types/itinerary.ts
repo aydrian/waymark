@@ -72,6 +72,32 @@ export const TransportLegSchema = z.object({
   cost: z.number().nonnegative().optional(),
 });
 
+export const RentalCarReservationSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: ItemStatusSchema,
+  // Pickup
+  pickupDate: z.string(),           // YYYY-MM-DD
+  pickupTime: z.string(),           // HH:MM
+  pickupTimezone: z.string(),       // IANA e.g. "America/New_York"
+  pickupLocation: z.string().optional(),
+  pickupLat: z.number().optional(),
+  pickupLng: z.number().optional(),
+  // Dropoff
+  dropoffDate: z.string(),          // YYYY-MM-DD
+  dropoffTime: z.string(),          // HH:MM
+  dropoffTimezone: z.string(),      // IANA
+  dropoffLocation: z.string().optional(),
+  dropoffLat: z.number().optional(),
+  dropoffLng: z.number().optional(),
+  // Rental details
+  carClass: z.string().optional(),  // e.g. "Economy", "SUV", "Compact"
+  vendor: z.string().optional(),
+  confirmationNumber: z.string().optional(),
+  notes: z.string().optional(),
+  cost: z.number().nonnegative().optional(),
+});
+
 export const TripItemSchema = z.object({
   id: z.string(),
   type: ItemTypeSchema,
@@ -116,6 +142,7 @@ export const ItinerarySchema = z.object({
   notes: z.string().optional(),
   stays: z.array(HotelStaySchema).optional(),
   transportLegs: z.array(TransportLegSchema).optional().default([]),
+  rentalCars: z.array(RentalCarReservationSchema).optional().default([]),
   pois: z.array(PlaceOfInterestSchema).optional().default([]),
   pinSalt: z.string(),
   pinHash: z.string(),
@@ -128,6 +155,7 @@ export type ItemType = z.infer<typeof ItemTypeSchema>;
 export type ItemStatus = z.infer<typeof ItemStatusSchema>;
 export type HotelStay = z.infer<typeof HotelStaySchema>;
 export type TransportLeg = z.infer<typeof TransportLegSchema>;
+export type RentalCarReservation = z.infer<typeof RentalCarReservationSchema>;
 export type PoiCategory = z.infer<typeof PoiCategorySchema>;
 export type PlaceOfInterest = z.infer<typeof PlaceOfInterestSchema>;
 export type TripItem = z.infer<typeof TripItemSchema>;
