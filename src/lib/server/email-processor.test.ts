@@ -72,6 +72,26 @@ const HOTEL_STAY_AI_RESPONSE = JSON.stringify({
   },
 });
 
+const RENTAL_CAR_AI_RESPONSE = JSON.stringify({
+  type: 'rental_car',
+  tripId: 'abc12345',
+  data: {
+    title: 'Enterprise Compact',
+    status: 'booked',
+    pickupDate: '2026-06-02',
+    pickupTime: '10:00',
+    pickupTimezone: 'Europe/Paris',
+    pickupLocation: 'CDG Airport',
+    dropoffDate: '2026-06-07',
+    dropoffTime: '09:00',
+    dropoffTimezone: 'Europe/Paris',
+    dropoffLocation: 'CDG Airport',
+    carClass: 'Compact',
+    vendor: 'Enterprise',
+    confirmationNumber: 'ENT789',
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Mock factories
 // ---------------------------------------------------------------------------
@@ -182,6 +202,26 @@ describe('processEmail', () => {
     expect(savedTrip.stays).toHaveLength(1);
     expect(savedTrip.stays[0].title).toBe('Hotel Le Marais');
     expect(savedTrip.stays[0].id).toBeTruthy();
+  });
+
+  it('happy path — rental car parsed and written to KV', async () => {
+    const putMock = mock(async () => {});
+    const kv = makeKvMock(putMock);
+    const env: EmailProcessorEnv = {
+      AI: makeAiMock(RENTAL_CAR_AI_RESPONSE),
+      RESEND_API_KEY: 'test-key',
+      TRIPS: kv,
+    };
+    globalThis.fetch = makeResendFetchMock('Rental car confirmation details...');
+
+    const result = await processEmail(EMAIL_INPUT, env);
+
+    expect(result).toEqual({ ok: true, status: 'updated', tripId: 'abc12345' });
+    expect(putMock).toHaveBeenCalledTimes(1);
+    const savedTrip = JSON.parse(putMock.mock.calls[0][1] as string);
+    expect(savedTrip.rentalCars).toHaveLength(1);
+    expect(savedTrip.rentalCars[0].title).toBe('Enterprise Compact');
+    expect(savedTrip.rentalCars[0].id).toBeTruthy();
   });
 
   it('no_match — KV is not written', async () => {

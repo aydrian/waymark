@@ -74,9 +74,27 @@ const AiHotelStaySchema = z.object({
   notes: z.string().optional(),
 });
 
+const AiRentalCarSchema = z.object({
+  title: z.string(),
+  status: ItemStatusSchema,
+  pickupDate: z.string(),
+  pickupTime: z.string(),
+  pickupTimezone: z.string(),
+  pickupLocation: z.string().optional(),
+  dropoffDate: z.string(),
+  dropoffTime: z.string(),
+  dropoffTimezone: z.string(),
+  dropoffLocation: z.string().optional(),
+  carClass: z.string().optional(),
+  vendor: z.string().optional(),
+  confirmationNumber: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 const AiOutputSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('transport_leg'), tripId: z.string(), data: AiTransportLegSchema }),
   z.object({ type: z.literal('hotel_stay'), tripId: z.string(), data: AiHotelStaySchema }),
+  z.object({ type: z.literal('rental_car'), tripId: z.string(), data: AiRentalCarSchema }),
   z.object({
     type: z.literal('no_match'),
     tripId: z.string().nullable().optional(),
@@ -102,7 +120,7 @@ If no trip matches, set "type" to "no_match".
 
 Output schema:
 {
-  "type": "transport_leg" | "hotel_stay" | "no_match",
+  "type": "transport_leg" | "hotel_stay" | "rental_car" | "no_match",
   "tripId": "<id from the trips list, or null if no_match>",
   "data": { ... }
 }
@@ -135,7 +153,25 @@ For type "hotel_stay", data fields:
   address (string, optional)
   vendor (string, optional) — same as title usually
   confirmationNumber (string, optional)
-  notes (string, optional)`;
+  notes (string, optional)
+
+For type "rental_car", data fields:
+  title (string, required) — e.g. "Enterprise Compact at CDG"
+  status ("booked"|"quoted"|"pending"|"canceled", required)
+  pickupDate (YYYY-MM-DD, required)
+  pickupTime (HH:MM, required)
+  pickupTimezone (IANA timezone, required) — infer from pickup city/airport if not explicit
+  pickupLocation (string, optional) — pickup location name or airport code
+  dropoffDate (YYYY-MM-DD, required)
+  dropoffTime (HH:MM, required)
+  dropoffTimezone (IANA timezone, required)
+  dropoffLocation (string, optional) — dropoff location name or airport code
+  carClass (string, optional) — e.g. "Economy", "Compact", "SUV", "Full Size"
+  vendor (string, optional) — rental agency name e.g. "Enterprise", "Hertz", "Avis"
+  confirmationNumber (string, optional)
+  notes (string, optional)
+
+Recognize rental car confirmation emails from agencies such as Enterprise, Hertz, Avis, Budget, National, Alamo, Dollar, Thrifty, Europcar, Sixt, and others.`;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -239,6 +275,25 @@ export async function processEmail(
       notes: aiOutput.data.notes,
     };
     trip.transportLegs = [...(trip.transportLegs ?? []), leg];
+  } else if (aiOutput.type === 'rental_car') {
+    const rental = {
+      id: crypto.randomUUID(),
+      title: aiOutput.data.title,
+      status: aiOutput.data.status,
+      pickupDate: aiOutput.data.pickupDate,
+      pickupTime: aiOutput.data.pickupTime,
+      pickupTimezone: aiOutput.data.pickupTimezone,
+      pickupLocation: aiOutput.data.pickupLocation,
+      dropoffDate: aiOutput.data.dropoffDate,
+      dropoffTime: aiOutput.data.dropoffTime,
+      dropoffTimezone: aiOutput.data.dropoffTimezone,
+      dropoffLocation: aiOutput.data.dropoffLocation,
+      carClass: aiOutput.data.carClass,
+      vendor: aiOutput.data.vendor,
+      confirmationNumber: aiOutput.data.confirmationNumber,
+      notes: aiOutput.data.notes,
+    };
+    trip.rentalCars = [...(trip.rentalCars ?? []), rental];
   } else {
     const stay = {
       id: crypto.randomUUID(),
