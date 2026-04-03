@@ -181,15 +181,17 @@ const complexData = {
     tabRaw.addEventListener('click', () => activateTab('raw'));
 
     // --- CodeMirror editors ---
+    const scrollTheme = EditorView.theme({ "&": { height: "100%" }, ".cm-scroller": { overflow: "auto" } });
+
     const complexEditor = new EditorView({
       doc: JSON.stringify(complexData, null, 2),
-      extensions: [basicSetup, json()],
+      extensions: [basicSetup, json(), scrollTheme],
       parent: document.getElementById('complex-editor')!,
     });
 
     const rawEditor = new EditorView({
       doc: tripJson,
-      extensions: [basicSetup, json()],
+      extensions: [basicSetup, json(), scrollTheme],
       parent: document.getElementById('raw-editor')!,
     });
 

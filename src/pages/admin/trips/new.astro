@@ -135,7 +135,11 @@ const emptyComplexData = {
 
     const complexEditor = new EditorView({
       doc: JSON.stringify(complexData, null, 2),
-      extensions: [basicSetup, json()],
+      extensions: [
+        basicSetup,
+        json(),
+        EditorView.theme({ "&": { height: "100%" }, ".cm-scroller": { overflow: "auto" } }),
+      ],
       parent: document.getElementById('complex-editor')!,
     });
 
