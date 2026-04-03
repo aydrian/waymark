@@ -22,6 +22,13 @@ if (!hasContent) return;
 
 const isCheckinDay = activeStay !== null && checkinToday !== null && activeStay.id === checkinToday.id;
 const isIntermediateDay = activeStay !== null && !isCheckinDay;
+
+const nights = activeStay
+  ? Math.round((new Date(activeStay.checkoutDate).getTime() - new Date(activeStay.checkinDate).getTime()) / 86_400_000)
+  : 0;
+const costPerNight = (activeStay?.cost != null && nights > 0)
+  ? activeStay.cost / nights
+  : undefined;
 ---
 
 <div class="mx-4 mb-3 mt-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] sm:mx-6">
@@ -65,6 +72,16 @@ const isIntermediateDay = activeStay !== null && !isCheckinDay;
               {activeStay.checkinTime && <>Check-in {activeStay.checkinTime}</>}
               {activeStay.checkinTime && activeStay.confirmationNumber && <> · </>}
               {activeStay.confirmationNumber && <>Conf: {activeStay.confirmationNumber}</>}
+            </p>
+          )}
+          {activeStay.cost != null && (
+            <p class="mt-0.5 text-xs text-[var(--color-text-muted)]">
+              {activeStay.cost.toLocaleString()}
+              {costPerNight != null && nights > 1 && (
+                <> · {costPerNight % 1 === 0
+                  ? costPerNight.toLocaleString()
+                  : costPerNight.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/night</>
+              )}
             </p>
           )}
         </div>
