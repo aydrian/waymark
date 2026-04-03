@@ -140,7 +140,7 @@ export const ItinerarySchema = z.object({
   destinations: z.array(z.string()),
   days: z.array(DaySchema),
   notes: z.string().optional(),
-  stays: z.array(HotelStaySchema).optional(),
+  stays: z.array(HotelStaySchema).optional().default([]),
   transportLegs: z.array(TransportLegSchema).optional().default([]),
   rentalCars: z.array(RentalCarReservationSchema).optional().default([]),
   pois: z.array(PlaceOfInterestSchema).optional().default([]),
