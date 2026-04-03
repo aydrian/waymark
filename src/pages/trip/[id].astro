@@ -20,6 +20,7 @@ import {
   getHotelMapItems,
   getTransportItemsForDay,
   getTransportMapItems,
+  getRentalCarItemsForDay,
 } from '../../lib/trip-state';
 
 const { id } = Astro.params as { id: string };
@@ -56,6 +57,7 @@ const pois = trip.pois;
 // 5. Hotel stay context per day
 const stays = trip.stays ?? [];
 const legs = trip.transportLegs ?? [];
+const rentalCars = trip.rentalCars ?? [];
 const dayHotelContext = visibleDays.map(day => ({
   day,
   activeStay: getActiveStayForNight(stays, day.date),
@@ -64,6 +66,7 @@ const dayHotelContext = visibleDays.map(day => ({
   generatedItems: [
     ...generateHotelTimelineItems(stays, day.date),
     ...getTransportItemsForDay(legs, day.date),
+    ...getRentalCarItemsForDay(rentalCars, day.date),
   ],
 }));
 
