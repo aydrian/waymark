@@ -19,6 +19,7 @@ const complexData = {
   days: trip.days,
   stays: trip.stays ?? [],
   transportLegs: trip.transportLegs ?? [],
+  rentalCars: trip.rentalCars ?? [],
   pois: trip.pois ?? [],
   map: trip.map ?? null,
   notes: trip.notes ?? null,
@@ -107,7 +108,7 @@ const complexData = {
 
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
-            Days / Stays / Transport / POIs / Map (JSON)
+            Days / Stays / Transport / Rental Cars / POIs / Map (JSON)
           </label>
           <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:260px"></div>
         </div>
@@ -195,6 +196,17 @@ const complexData = {
       parent: document.getElementById('raw-editor')!,
     });
 
+    // --- Helpers ---
+    function formatIssues(issues: Array<{ path: (string | number)[]; message: string }>): string {
+      if (!issues.length) return 'Validation failed';
+      const parts = issues.map(i => {
+        const path = i.path.reduce<string>((acc, p, idx) =>
+          typeof p === 'number' ? `${acc}[${p}]` : idx === 0 ? String(p) : `${acc}.${p}`, '');
+        return path ? `${path}: ${i.message}` : i.message;
+      });
+      return `Validation failed — ${parts.join('; ')}`;
+    }
+
     // --- Info form save ---
     async function saveTrip(payload: unknown) {
       const res = await fetch('/api/admin/trips/upsert', {
@@ -244,12 +256,12 @@ const complexData = {
       };
 
       try {
-        const data = await saveTrip(payload) as { ok?: boolean; error?: string };
+        const data = await saveTrip(payload) as { ok?: boolean; error?: string; issues?: Array<{ path: (string | number)[]; message: string }> };
         if (data.ok) {
           infoStatus.textContent = 'Saved.';
           infoStatus.className = 'text-sm mt-3 text-green-400';
         } else {
-          infoStatus.textContent = data.error ?? 'Save failed';
+          infoStatus.textContent = data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed');
           infoStatus.className = 'text-sm mt-3 text-red-400';
         }
       } catch {
@@ -277,12 +289,12 @@ const complexData = {
         return;
       }
       try {
-        const data = await saveTrip(parsed) as { ok?: boolean; error?: string; issues?: unknown[] };
+        const data = await saveTrip(parsed) as { ok?: boolean; error?: string; issues?: Array<{ path: (string | number)[]; message: string }> };
         if (data.ok) {
           rawStatus.textContent = 'Saved.';
           rawStatus.className = 'text-sm text-green-400';
         } else {
-          rawStatus.textContent = JSON.stringify(data.issues ?? data.error ?? 'Save failed');
+          rawStatus.textContent = data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed');
           rawStatus.className = 'text-sm text-red-400';
         }
       } catch {
