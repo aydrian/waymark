@@ -25,6 +25,7 @@ export const HotelStaySchema = z.object({
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
   cost: z.number().nonnegative().optional(),
+  costCurrency: z.string().length(3).default('USD').optional(),
 });
 
 export const PoiCategorySchema = z.enum([
@@ -70,6 +71,7 @@ export const TransportLegSchema = z.object({
   seat: z.string().optional(),
   notes: z.string().optional(),
   cost: z.number().nonnegative().optional(),
+  costCurrency: z.string().length(3).default('USD').optional(),
 });
 
 export const RentalCarReservationSchema = z.object({
@@ -96,6 +98,7 @@ export const RentalCarReservationSchema = z.object({
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
   cost: z.number().nonnegative().optional(),
+  costCurrency: z.string().length(3).default('USD').optional(),
 });
 
 export const TripItemSchema = z.object({
@@ -113,6 +116,7 @@ export const TripItemSchema = z.object({
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
   cost: z.number().nonnegative().optional(),
+  costCurrency: z.string().length(3).default('USD').optional(),
 });
 
 export const DaySchema = z.object({
@@ -148,6 +152,7 @@ export const ItinerarySchema = z.object({
   pinHash: z.string(),
   updatedAt: z.string(), // ISO datetime
   map: MapConfigSchema,
+  baseCurrency: z.string().length(3).default('USD').optional(),
 });
 
 // TypeScript types derived from schemas

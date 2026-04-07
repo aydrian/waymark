@@ -1,12 +1,27 @@
 ---
 import StatusBadge from './StatusBadge.astro';
 import type { ItemStatus } from '../types/itinerary';
+import { formatCurrencySmart, getCurrencySymbol } from '../lib/exchange-rates';
+
+export interface OriginalCost {
+  amount: number;
+  currency: string;
+}
+
+export interface ConvertedCost {
+  amount: number;
+  currency: string;
+  rate: number;
+  rateSource: 'frankfurter' | 'fawaz' | 'cache';
+  rateDate: string;
+}
 
 export interface ExpenseItem {
   id: string;
   title: string;
   status: ItemStatus;
-  cost: number;
+  originalCost: OriginalCost;
+  convertedCost?: ConvertedCost;
   dateRange?: string;
   vendor?: string;
 }
@@ -14,15 +29,18 @@ export interface ExpenseItem {
 export interface ExpenseCategory {
   name: string;
   items: ExpenseItem[];
-  subtotal: number;
+  originalSubtotal: { amount: number; currency: string };
+  convertedSubtotal?: { amount: number; currency: string };
 }
 
 interface Props {
   categories: ExpenseCategory[];
-  grandTotal: number;
+  grandTotalOriginal: { amount: number; currency: string };
+  grandTotalConverted: { amount: number; currency: string };
+  exchangeRatesUsed: Array<{ from: string; to: string; rate: number; source: string; date: string }>;
 }
 
-const { categories, grandTotal } = Astro.props;
+const { categories, grandTotalOriginal, grandTotalConverted, exchangeRatesUsed } = Astro.props;
 
 const hasExpenses = categories.some(c => c.items.length > 0);
 
@@ -36,6 +54,10 @@ const categoryMeta: Record<string, { icon: string; label: string }> = {
   transfers: { icon: '🚐', label: 'Transfers' },
   other: { icon: '📝', label: 'Other' },
 };
+
+// Check if we have multiple currencies
+const hasMultipleCurrencies = exchangeRatesUsed.length > 0;
+const allCurrencies = [...new Set(categories.flatMap(c => c.items.map(i => i.originalCost.currency)))];
 ---
 
 {!hasExpenses ? (
@@ -47,6 +69,21 @@ const categoryMeta: Record<string, { icon: string; label: string }> = {
   </div>
 ) : (
   <div class="px-4 py-6 sm:px-6 space-y-6">
+    {/* Exchange rates summary - show if multiple currencies */}
+    {hasMultipleCurrencies && (
+      <div class="bg-[var(--color-bg-subtle)] rounded-lg p-3 text-xs">
+        <p class="font-medium text-[var(--color-text-secondary)] mb-1">Exchange Rates Used</p>
+        <div class="flex flex-wrap gap-x-4 gap-y-1">
+          {exchangeRatesUsed.map(rate => (
+            <span class="text-[var(--color-text-muted)]">
+              1 {rate.from} = {rate.rate.toFixed(4)} {rate.to}
+              <span class="text-[var(--color-text-muted)]/60 ml-1">({rate.source})</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
     {/* Category sections */}
     {categories.map(category => (
       category.items.length > 0 && (
@@ -64,9 +101,16 @@ const categoryMeta: Record<string, { icon: string; label: string }> = {
                 {category.items.length}
               </span>
             </div>
-            <span class="text-sm font-semibold text-[var(--color-text-primary)]">
-              {category.subtotal.toLocaleString()}
-            </span>
+            <div class="text-right">
+              {category.convertedSubtotal && category.originalSubtotal.currency !== category.convertedSubtotal.currency && (
+                <span class="block text-xs text-[var(--color-text-muted)]">
+                  {formatCurrencySmart(category.originalSubtotal.amount, category.originalSubtotal.currency)}
+                </span>
+              )}
+              <span class="text-sm font-semibold text-[var(--color-text-primary)]">
+                {formatCurrencySmart(category.convertedSubtotal?.amount ?? category.originalSubtotal.amount, 'USD')}
+              </span>
+            </div>
           </div>
 
           {/* Items list */}
@@ -91,9 +135,26 @@ const categoryMeta: Record<string, { icon: string; label: string }> = {
                     </p>
                   )}
                 </div>
-                <span class="text-sm font-medium text-[var(--color-text-primary)] whitespace-nowrap">
-                  {item.cost.toLocaleString()}
-                </span>
+                <div class="text-right whitespace-nowrap">
+                  {item.convertedCost && item.originalCost.currency !== item.convertedCost.currency && (
+                    <>
+                      <span class="block text-sm text-[var(--color-text-primary)]">
+                        {formatCurrencySmart(item.convertedCost.amount, item.convertedCost.currency)}
+                      </span>
+                      <span class="block text-xs text-[var(--color-text-muted)]">
+                        {formatCurrencySmart(item.originalCost.amount, item.originalCost.currency)}
+                      </span>
+                      <span class="block text-xs text-[var(--color-text-muted)]/60">
+                        1 {item.convertedCost.currency} = {(1 / item.convertedCost.rate).toFixed(4)} {item.originalCost.currency}
+                      </span>
+                    </>
+                  )}
+                  {!item.convertedCost && (
+                    <span class="text-sm font-medium text-[var(--color-text-primary)]">
+                      {formatCurrencySmart(item.originalCost.amount, item.originalCost.currency)}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -109,9 +170,16 @@ const categoryMeta: Record<string, { icon: string; label: string }> = {
                 : category.name === 'transfers' ? 'Transfers Subtotal'
                 : 'Subtotal'}
             </span>
-            <span class="text-sm font-semibold text-[var(--color-text-primary)]">
-              {category.subtotal.toLocaleString()}
-            </span>
+            <div class="text-right">
+              {category.convertedSubtotal && category.originalSubtotal.currency !== category.convertedSubtotal.currency && (
+                <span class="block text-xs text-[var(--color-text-muted)]">
+                  {formatCurrencySmart(category.originalSubtotal.amount, category.originalSubtotal.currency)}
+                </span>
+              )}
+              <span class="text-sm font-semibold text-[var(--color-text-primary)]">
+                {formatCurrencySmart(category.convertedSubtotal?.amount ?? category.originalSubtotal.amount, 'USD')}
+              </span>
+            </div>
           </div>
         </section>
       )
@@ -124,12 +192,28 @@ const categoryMeta: Record<string, { icon: string; label: string }> = {
           <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Grand Total</h3>
           <p class="text-xs text-[var(--color-text-muted)]">
             {categories.reduce((sum, c) => sum + c.items.length, 0)} items across {categories.filter(c => c.items.length > 0).length} categories
+            {hasMultipleCurrencies && (
+              <span> · {allCurrencies.join(', ')} converted to USD</span>
+            )}
           </p>
         </div>
-        <span class="text-xl font-bold text-[var(--color-text-primary)]">
-          {grandTotal.toLocaleString()}
-        </span>
+        <div class="text-right">
+          {hasMultipleCurrencies && grandTotalOriginal.currency !== 'USD' && (
+            <span class="block text-sm text-[var(--color-text-secondary)]">
+              {formatCurrencySmart(grandTotalOriginal.amount, grandTotalOriginal.currency)}
+            </span>
+          )}
+          <span class="text-xl font-bold text-[var(--color-text-primary)]">
+            {formatCurrencySmart(grandTotalConverted.amount, 'USD')}
+          </span>
+        </div>
       </div>
+    </div>
+
+    {/* Disclaimer */}
+    <div class="text-xs text-[var(--color-text-muted)] text-center pt-2">
+      <p>Exchange rates are estimates based on current market rates sourced from Frankfurter (ECB reference rates) and Fawaz Ahmed's Exchange API.</p>
+      <p class="mt-0.5">Actual charges may vary based on your payment provider's rates, fees, and the date of transaction. Rates shown: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</p>
     </div>
   </div>
 )}

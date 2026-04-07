@@ -9,6 +9,7 @@ import LiveTripBanner from '../../components/LiveTripBanner.astro';
 import TripTabs from '../../components/TripTabs.astro';
 import PlacesTab from '../../components/PlacesTab.astro';
 import ExpensesTab from '../../components/ExpensesTab.astro';
+import type { ExpenseCategory, ExpenseItem } from '../../components/ExpensesTab.astro';
 import { env } from 'cloudflare:workers';
 import { getTrip } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
@@ -23,6 +24,7 @@ import {
   getTransportMapItems,
   getRentalCarItemsForDay,
 } from '../../lib/trip-state';
+import { getExchangeRate, convertCurrency, type ExchangeRateResult } from '../../lib/exchange-rates';
 
 const { id } = Astro.params as { id: string };
 
@@ -55,169 +57,250 @@ const tabParam = Astro.url.searchParams.get('tab');
 const activeTab = tabParam === 'places' ? 'places' : tabParam === 'expenses' ? 'expenses' : 'itinerary';
 const pois = trip.pois;
 
-// 4b. Expenses data aggregation
-type ExpenseItem = {
+// 4b. Expenses data aggregation with currency support
+
+// Collect raw expenses with their currencies
+const rawExpenses: Array<{
   id: string;
   title: string;
   status: import('../../types/itinerary').ItemStatus;
-  cost: number;
+  amount: number;
+  currency: string;
   dateRange?: string;
   vendor?: string;
-};
-
-const expenseCategories: Array<{
-  name: string;
-  items: ExpenseItem[];
-  subtotal: number;
+  category: string;
 }> = [];
 
-// Lodging: from stays
-const lodgingItems: ExpenseItem[] = (trip.stays ?? [])
-  .filter(s => s.cost != null)
-  .map(s => ({
-    id: s.id,
-    title: s.title,
-    status: s.status,
-    cost: s.cost!,
-    dateRange: s.checkinDate === s.checkoutDate
-      ? s.checkinDate
-      : `${s.checkinDate} – ${s.checkoutDate}`,
-    vendor: s.vendor,
-  }));
+// Helper to get currency (defaults to USD if not specified)
+const getCurrency = (currency: string | undefined | null) => (currency && currency.length === 3 ? currency.toUpperCase() : 'USD');
 
-if (lodgingItems.length > 0) {
-  expenseCategories.push({
-    name: 'lodging',
-    items: lodgingItems,
-    subtotal: lodgingItems.reduce((sum, i) => sum + i.cost, 0),
+// Lodging: from stays
+(trip.stays ?? [])
+  .filter(s => s.cost != null)
+  .forEach(s => {
+    rawExpenses.push({
+      id: s.id,
+      title: s.title,
+      status: s.status,
+      amount: s.cost!,
+      currency: getCurrency(s.costCurrency),
+      dateRange: s.checkinDate === s.checkoutDate
+        ? s.checkinDate
+        : `${s.checkinDate} – ${s.checkoutDate}`,
+      vendor: s.vendor,
+      category: 'lodging',
+    });
   });
-}
 
 // Travel: from transport legs
-const travelItems: ExpenseItem[] = (trip.transportLegs ?? [])
+(trip.transportLegs ?? [])
   .filter(l => l.cost != null)
-  .map(l => ({
-    id: l.id,
-    title: l.title,
-    status: l.status,
-    cost: l.cost!,
-    dateRange: l.departureDate === l.arrivalDate
-      ? l.departureDate
-      : `${l.departureDate} – ${l.arrivalDate}`,
-    vendor: l.vendor,
-  }));
-
-if (travelItems.length > 0) {
-  expenseCategories.push({
-    name: 'travel',
-    items: travelItems,
-    subtotal: travelItems.reduce((sum, i) => sum + i.cost, 0),
+  .forEach(l => {
+    rawExpenses.push({
+      id: l.id,
+      title: l.title,
+      status: l.status,
+      amount: l.cost!,
+      currency: getCurrency(l.costCurrency),
+      dateRange: l.departureDate === l.arrivalDate
+        ? l.departureDate
+        : `${l.departureDate} – ${l.arrivalDate}`,
+      vendor: l.vendor,
+      category: 'travel',
+    });
   });
-}
 
 // Rental Cars
-const rentalCarItems: ExpenseItem[] = (trip.rentalCars ?? [])
+(trip.rentalCars ?? [])
   .filter(r => r.cost != null)
-  .map(r => ({
-    id: r.id,
-    title: r.title,
-    status: r.status,
-    cost: r.cost!,
-    dateRange: r.pickupDate === r.dropoffDate
-      ? r.pickupDate
-      : `${r.pickupDate} – ${r.dropoffDate}`,
-    vendor: r.vendor,
-  }));
-
-if (rentalCarItems.length > 0) {
-  expenseCategories.push({
-    name: 'rental-cars',
-    items: rentalCarItems,
-    subtotal: rentalCarItems.reduce((sum, i) => sum + i.cost, 0),
+  .forEach(r => {
+    rawExpenses.push({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      amount: r.cost!,
+      currency: getCurrency(r.costCurrency),
+      dateRange: r.pickupDate === r.dropoffDate
+        ? r.pickupDate
+        : `${r.pickupDate} – ${r.dropoffDate}`,
+      vendor: r.vendor,
+      category: 'rental-cars',
+    });
   });
-}
 
 // Trip items from days: group by type
 const dayItems = trip.days.flatMap(d => d.items);
 
 // Activities
-const activityItems: ExpenseItem[] = dayItems
+dayItems
   .filter(i => i.type === 'activity' && i.cost != null)
-  .map(i => ({
-    id: i.id,
-    title: i.title,
-    status: i.status,
-    cost: i.cost!,
-    vendor: i.vendor,
-  }));
-
-if (activityItems.length > 0) {
-  expenseCategories.push({
-    name: 'activities',
-    items: activityItems,
-    subtotal: activityItems.reduce((sum, i) => sum + i.cost, 0),
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'activities',
+    });
   });
-}
 
 // Dining (restaurants)
-const diningItems: ExpenseItem[] = dayItems
+dayItems
   .filter(i => i.type === 'restaurant' && i.cost != null)
-  .map(i => ({
-    id: i.id,
-    title: i.title,
-    status: i.status,
-    cost: i.cost!,
-    vendor: i.vendor,
-  }));
-
-if (diningItems.length > 0) {
-  expenseCategories.push({
-    name: 'dining',
-    items: diningItems,
-    subtotal: diningItems.reduce((sum, i) => sum + i.cost, 0),
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'dining',
+    });
   });
-}
 
 // Transfers
-const transferItems: ExpenseItem[] = dayItems
+dayItems
   .filter(i => i.type === 'transfer' && i.cost != null)
-  .map(i => ({
-    id: i.id,
-    title: i.title,
-    status: i.status,
-    cost: i.cost!,
-    vendor: i.vendor,
-  }));
-
-if (transferItems.length > 0) {
-  expenseCategories.push({
-    name: 'transfers',
-    items: transferItems,
-    subtotal: transferItems.reduce((sum, i) => sum + i.cost, 0),
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'transfers',
+    });
   });
-}
 
 // Other: hotel (day items), transport (day items), note
-const otherItems: ExpenseItem[] = dayItems
+dayItems
   .filter(i => (i.type === 'hotel' || i.type === 'transport' || i.type === 'note') && i.cost != null)
-  .map(i => ({
-    id: i.id,
-    title: i.title,
-    status: i.status,
-    cost: i.cost!,
-    vendor: i.vendor,
-  }));
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'other',
+    });
+  });
 
-if (otherItems.length > 0) {
+// Get unique currencies for exchange rate fetching
+const uniqueCurrencies = [...new Set(rawExpenses.map(e => e.currency))].filter(c => c !== 'USD');
+
+// Fetch exchange rates
+const exchangeRates: Record<string, ExchangeRateResult> = {};
+if (uniqueCurrencies.length > 0) {
+  await Promise.all(
+    uniqueCurrencies.map(async (currency) => {
+      const rate = await getExchangeRate(currency, 'USD', { EXCHANGE_RATE_CACHE: env.EXCHANGE_RATE_CACHE });
+      if (rate) {
+        exchangeRates[currency] = rate;
+      }
+    })
+  );
+}
+
+// Build expense categories with conversions
+const expensesCount = rawExpenses.length;
+const expenseCategories: ExpenseCategory[] = [];
+const categoryNames = ['lodging', 'travel', 'rental-cars', 'activities', 'dining', 'transfers', 'other'] as const;
+
+for (const catName of categoryNames) {
+  const items = rawExpenses.filter(e => e.category === catName);
+  if (items.length === 0) continue;
+
+  // Group by currency for subtotal calculation
+  const originalSubtotalsByCurrency: Record<string, number> = {};
+  let convertedSubtotalUSD = 0;
+
+  const expenseItems: ExpenseItem[] = items.map(item => {
+    const originalCost = { amount: item.amount, currency: item.currency };
+    let convertedCost: ExpenseItem['convertedCost'] = undefined;
+
+    // Calculate converted amount if exchange rate available
+    if (item.currency !== 'USD' && exchangeRates[item.currency]) {
+      const rate = exchangeRates[item.currency];
+      const usdAmount = convertCurrency(item.amount, rate.rate);
+      convertedCost = {
+        amount: usdAmount,
+        currency: 'USD',
+        rate: rate.rate,
+        rateSource: rate.source,
+        rateDate: rate.date,
+      };
+      convertedSubtotalUSD += usdAmount;
+    } else if (item.currency === 'USD') {
+      convertedSubtotalUSD += item.amount;
+    }
+
+    // Track original subtotal by currency
+    originalSubtotalsByCurrency[item.currency] = (originalSubtotalsByCurrency[item.currency] || 0) + item.amount;
+
+    return {
+      id: item.id,
+      title: item.title,
+      status: item.status,
+      originalCost,
+      convertedCost,
+      dateRange: item.dateRange,
+      vendor: item.vendor,
+    };
+  });
+
+  // Use the most common currency as the "original subtotal currency" or USD
+  const sortedCurrencies = Object.entries(originalSubtotalsByCurrency)
+    .sort((a, b) => b[1] - a[1])
+    .map(([currency]) => currency);
+  const primaryCurrency = sortedCurrencies[0] || 'USD';
+  const originalSubtotal = originalSubtotalsByCurrency[primaryCurrency] || 0;
+
   expenseCategories.push({
-    name: 'other',
-    items: otherItems,
-    subtotal: otherItems.reduce((sum, i) => sum + i.cost, 0),
+    name: catName,
+    items: expenseItems,
+    originalSubtotal: { amount: originalSubtotal, currency: primaryCurrency },
+    convertedSubtotal: { amount: convertedSubtotalUSD, currency: 'USD' },
   });
 }
 
-const grandTotal = expenseCategories.reduce((sum, c) => sum + c.subtotal, 0);
-const expensesCount = expenseCategories.reduce((sum, c) => sum + c.items.length, 0);
+// Calculate grand totals
+const grandTotalByCurrency: Record<string, number> = {};
+let grandTotalUSD = 0;
+
+for (const expense of rawExpenses) {
+  // Track by original currency
+  grandTotalByCurrency[expense.currency] = (grandTotalByCurrency[expense.currency] || 0) + expense.amount;
+
+  // Add to USD total
+  if (expense.currency === 'USD') {
+    grandTotalUSD += expense.amount;
+  } else if (exchangeRates[expense.currency]) {
+    grandTotalUSD += convertCurrency(expense.amount, exchangeRates[expense.currency].rate);
+  }
+}
+
+// Primary grand total currency (most common)
+const primaryGrandCurrency = Object.entries(grandTotalByCurrency)
+  .sort((a, b) => b[1] - a[1])
+  .map(([currency]) => currency)[0] || 'USD';
+
+const grandTotalOriginal = { amount: grandTotalByCurrency[primaryGrandCurrency] || grandTotalUSD, currency: primaryGrandCurrency };
+const grandTotalConverted = { amount: grandTotalUSD, currency: 'USD' };
+
+// Build exchange rates used list for display
+const exchangeRatesUsed = Object.entries(exchangeRates).map(([from, rate]) => ({
+  from,
+  to: 'USD',
+  rate: rate.rate,
+  source: rate.source,
+  date: rate.date,
+}));
 
 // 5. Hotel stay context per day
 const stays = trip.stays ?? [];
@@ -288,7 +371,12 @@ const localDateDisplay = isLive
       {activeTab === 'places' ? (
         <PlacesTab pois={pois} />
       ) : activeTab === 'expenses' ? (
-        <ExpensesTab categories={expenseCategories} grandTotal={grandTotal} />
+        <ExpensesTab
+          categories={expenseCategories}
+          grandTotalOriginal={grandTotalOriginal}
+          grandTotalConverted={grandTotalConverted}
+          exchangeRatesUsed={exchangeRatesUsed}
+        />
       ) : (
         <>
           <TripMap
