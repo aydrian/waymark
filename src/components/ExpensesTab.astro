@@ -1,0 +1,135 @@
+---
+import StatusBadge from './StatusBadge.astro';
+import type { ItemStatus } from '../types/itinerary';
+
+export interface ExpenseItem {
+  id: string;
+  title: string;
+  status: ItemStatus;
+  cost: number;
+  dateRange?: string;
+  vendor?: string;
+}
+
+export interface ExpenseCategory {
+  name: string;
+  items: ExpenseItem[];
+  subtotal: number;
+}
+
+interface Props {
+  categories: ExpenseCategory[];
+  grandTotal: number;
+}
+
+const { categories, grandTotal } = Astro.props;
+
+const hasExpenses = categories.some(c => c.items.length > 0);
+
+// Category display order and icons
+const categoryMeta: Record<string, { icon: string; label: string }> = {
+  lodging: { icon: '🏨', label: 'Lodging' },
+  travel: { icon: '✈️', label: 'Travel' },
+  'rental-cars': { icon: '🚗', label: 'Rental Cars' },
+  activities: { icon: '🎯', label: 'Activities' },
+  dining: { icon: '🍽️', label: 'Dining' },
+  transfers: { icon: '🚐', label: 'Transfers' },
+  other: { icon: '📝', label: 'Other' },
+};
+---
+
+{!hasExpenses ? (
+  <div class="px-4 py-12 text-center sm:px-6">
+    <p class="text-sm text-[var(--color-text-muted)]">No expenses have been added to this trip yet.</p>
+    <p class="text-xs text-[var(--color-text-muted)] mt-2">
+      Costs can be added to hotels, transport, activities, and other items.
+    </p>
+  </div>
+) : (
+  <div class="px-4 py-6 sm:px-6 space-y-6">
+    {/* Category sections */}
+    {categories.map(category => (
+      category.items.length > 0 && (
+        <section class="border border-[var(--color-border)] rounded-lg overflow-hidden">
+          {/* Category header */}
+          <div class="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-subtle)] border-b border-[var(--color-border)]">
+            <div class="flex items-center gap-2">
+              <span class="text-lg" aria-hidden="true">
+                {categoryMeta[category.name]?.icon || '📋'}
+              </span>
+              <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">
+                {categoryMeta[category.name]?.label || category.name}
+              </h3>
+              <span class="rounded-full bg-[var(--color-bg-muted)] px-2 py-0.5 text-xs text-[var(--color-text-muted)]">
+                {category.items.length}
+              </span>
+            </div>
+            <span class="text-sm font-semibold text-[var(--color-text-primary)]">
+              {category.subtotal.toLocaleString()}
+            </span>
+          </div>
+
+          {/* Items list */}
+          <div class="divide-y divide-[var(--color-border)]">
+            {category.items.map(item => (
+              <div class="flex items-center justify-between px-4 py-3 hover:bg-[var(--color-bg-subtle)] transition-colors">
+                <div class="flex-1 min-w-0 pr-4">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {item.title}
+                    </span>
+                    <StatusBadge status={item.status} />
+                  </div>
+                  {item.dateRange && (
+                    <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      {item.dateRange}
+                    </p>
+                  )}
+                  {item.vendor && (
+                    <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      via {item.vendor}
+                    </p>
+                  )}
+                </div>
+                <span class="text-sm font-medium text-[var(--color-text-primary)] whitespace-nowrap">
+                  {item.cost.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Category subtotal footer */}
+          <div class="flex items-center justify-between px-4 py-2 bg-[var(--color-bg-subtle)] border-t border-[var(--color-border)]">
+            <span class="text-xs font-medium text-[var(--color-text-secondary)]">
+              {category.name === 'lodging' ? 'Lodging Subtotal'
+                : category.name === 'travel' ? 'Travel Subtotal'
+                : category.name === 'rental-cars' ? 'Rental Cars Subtotal'
+                : category.name === 'activities' ? 'Activities Subtotal'
+                : category.name === 'dining' ? 'Dining Subtotal'
+                : category.name === 'transfers' ? 'Transfers Subtotal'
+                : 'Subtotal'}
+            </span>
+            <span class="text-sm font-semibold text-[var(--color-text-primary)]">
+              {category.subtotal.toLocaleString()}
+            </span>
+          </div>
+        </section>
+      )
+    ))}
+
+    {/* Grand Total */}
+    <div class="sticky bottom-0 bg-[var(--color-bg-primary)] border-t border-[var(--color-border)] -mx-4 px-4 py-4 sm:-mx-6 sm:px-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Grand Total</h3>
+          <p class="text-xs text-[var(--color-text-muted)]">
+            {categories.reduce((sum, c) => sum + c.items.length, 0)} items across {categories.filter(c => c.items.length > 0).length} categories
+          </p>
+        </div>
+        <span class="text-xl font-bold text-[var(--color-text-primary)]">
+          {grandTotal.toLocaleString()}
+        </span>
+      </div>
+    </div>
+  </div>
+)}

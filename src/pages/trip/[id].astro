@@ -8,6 +8,7 @@ import PinGateForm from '../../components/PinGateForm.astro';
 import LiveTripBanner from '../../components/LiveTripBanner.astro';
 import TripTabs from '../../components/TripTabs.astro';
 import PlacesTab from '../../components/PlacesTab.astro';
+import ExpensesTab from '../../components/ExpensesTab.astro';
 import { env } from 'cloudflare:workers';
 import { getTrip } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
@@ -51,8 +52,172 @@ const currentDayNumber = currentDay?.dayNumber;
 
 // 4. Tab state
 const tabParam = Astro.url.searchParams.get('tab');
-const activeTab = tabParam === 'places' ? 'places' : 'itinerary';
+const activeTab = tabParam === 'places' ? 'places' : tabParam === 'expenses' ? 'expenses' : 'itinerary';
 const pois = trip.pois;
+
+// 4b. Expenses data aggregation
+type ExpenseItem = {
+  id: string;
+  title: string;
+  status: import('../../types/itinerary').ItemStatus;
+  cost: number;
+  dateRange?: string;
+  vendor?: string;
+};
+
+const expenseCategories: Array<{
+  name: string;
+  items: ExpenseItem[];
+  subtotal: number;
+}> = [];
+
+// Lodging: from stays
+const lodgingItems: ExpenseItem[] = (trip.stays ?? [])
+  .filter(s => s.cost != null)
+  .map(s => ({
+    id: s.id,
+    title: s.title,
+    status: s.status,
+    cost: s.cost!,
+    dateRange: s.checkinDate === s.checkoutDate
+      ? s.checkinDate
+      : `${s.checkinDate} – ${s.checkoutDate}`,
+    vendor: s.vendor,
+  }));
+
+if (lodgingItems.length > 0) {
+  expenseCategories.push({
+    name: 'lodging',
+    items: lodgingItems,
+    subtotal: lodgingItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+// Travel: from transport legs
+const travelItems: ExpenseItem[] = (trip.transportLegs ?? [])
+  .filter(l => l.cost != null)
+  .map(l => ({
+    id: l.id,
+    title: l.title,
+    status: l.status,
+    cost: l.cost!,
+    dateRange: l.departureDate === l.arrivalDate
+      ? l.departureDate
+      : `${l.departureDate} – ${l.arrivalDate}`,
+    vendor: l.vendor,
+  }));
+
+if (travelItems.length > 0) {
+  expenseCategories.push({
+    name: 'travel',
+    items: travelItems,
+    subtotal: travelItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+// Rental Cars
+const rentalCarItems: ExpenseItem[] = (trip.rentalCars ?? [])
+  .filter(r => r.cost != null)
+  .map(r => ({
+    id: r.id,
+    title: r.title,
+    status: r.status,
+    cost: r.cost!,
+    dateRange: r.pickupDate === r.dropoffDate
+      ? r.pickupDate
+      : `${r.pickupDate} – ${r.dropoffDate}`,
+    vendor: r.vendor,
+  }));
+
+if (rentalCarItems.length > 0) {
+  expenseCategories.push({
+    name: 'rental-cars',
+    items: rentalCarItems,
+    subtotal: rentalCarItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+// Trip items from days: group by type
+const dayItems = trip.days.flatMap(d => d.items);
+
+// Activities
+const activityItems: ExpenseItem[] = dayItems
+  .filter(i => i.type === 'activity' && i.cost != null)
+  .map(i => ({
+    id: i.id,
+    title: i.title,
+    status: i.status,
+    cost: i.cost!,
+    vendor: i.vendor,
+  }));
+
+if (activityItems.length > 0) {
+  expenseCategories.push({
+    name: 'activities',
+    items: activityItems,
+    subtotal: activityItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+// Dining (restaurants)
+const diningItems: ExpenseItem[] = dayItems
+  .filter(i => i.type === 'restaurant' && i.cost != null)
+  .map(i => ({
+    id: i.id,
+    title: i.title,
+    status: i.status,
+    cost: i.cost!,
+    vendor: i.vendor,
+  }));
+
+if (diningItems.length > 0) {
+  expenseCategories.push({
+    name: 'dining',
+    items: diningItems,
+    subtotal: diningItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+// Transfers
+const transferItems: ExpenseItem[] = dayItems
+  .filter(i => i.type === 'transfer' && i.cost != null)
+  .map(i => ({
+    id: i.id,
+    title: i.title,
+    status: i.status,
+    cost: i.cost!,
+    vendor: i.vendor,
+  }));
+
+if (transferItems.length > 0) {
+  expenseCategories.push({
+    name: 'transfers',
+    items: transferItems,
+    subtotal: transferItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+// Other: hotel (day items), transport (day items), note
+const otherItems: ExpenseItem[] = dayItems
+  .filter(i => (i.type === 'hotel' || i.type === 'transport' || i.type === 'note') && i.cost != null)
+  .map(i => ({
+    id: i.id,
+    title: i.title,
+    status: i.status,
+    cost: i.cost!,
+    vendor: i.vendor,
+  }));
+
+if (otherItems.length > 0) {
+  expenseCategories.push({
+    name: 'other',
+    items: otherItems,
+    subtotal: otherItems.reduce((sum, i) => sum + i.cost, 0),
+  });
+}
+
+const grandTotal = expenseCategories.reduce((sum, c) => sum + c.subtotal, 0);
+const expensesCount = expenseCategories.reduce((sum, c) => sum + c.items.length, 0);
 
 // 5. Hotel stay context per day
 const stays = trip.stays ?? [];
@@ -119,9 +284,11 @@ const localDateDisplay = isLive
         />
       )}
       <TripHeader trip={trip} />
-      <TripTabs tripId={id} activeTab={activeTab} poisCount={pois.length} />
+      <TripTabs tripId={id} activeTab={activeTab} poisCount={pois.length} expensesCount={expensesCount} />
       {activeTab === 'places' ? (
         <PlacesTab pois={pois} />
+      ) : activeTab === 'expenses' ? (
+        <ExpensesTab categories={expenseCategories} grandTotal={grandTotal} />
       ) : (
         <>
           <TripMap
