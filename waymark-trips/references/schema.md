@@ -25,6 +25,7 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `transportLegs` | TransportLeg[] | no | Array of transport legs (see below). Preferred over `type: 'transport'` TripItems for flights, trains, ferries, and buses. Departure/arrival/in-transit entries are generated at render time. |
 | `rentalCars` | RentalCarReservation[] | no | Array of rental car reservations (see below). Pickup and dropoff timeline entries are generated at render time from this array. |
 | `map` | object | no | `{ centerLat?, centerLng?, zoom? }` — all optional numbers |
+| `baseCurrency` | string | no | 3-letter ISO currency code, e.g. `"USD"`, `"EUR"`, `"GBP"`. Defaults to `"USD"` |
 
 ---
 
@@ -63,6 +64,7 @@ Represents a multi-night hotel stay. Stored at the itinerary level (not inside a
 | `confirmationNumber` | string | no | Booking reference |
 | `notes` | string | no | Room type, inclusions, special requests |
 | `cost` | number | no | Non-negative. Total cost of the stay (e.g. full room charge) |
+| `costCurrency` | string | no | 3-letter ISO currency code. Defaults to `"USD"` |
 
 ---
 
@@ -95,6 +97,7 @@ Represents a point-to-point transport leg (flight, train, ferry, bus). Stored at
 | `seat` | string | no | Seat assignment, e.g. `"12A"` or `"41/42"` |
 | `notes` | string | no | Free text |
 | `cost` | number | no | Non-negative. Total fare for this leg |
+| `costCurrency` | string | no | 3-letter ISO currency code. Defaults to `"USD"` |
 
 ---
 
@@ -124,6 +127,7 @@ Represents a rental car booking. Stored at the itinerary level in `rentalCars` (
 | `confirmationNumber` | string | no | Booking reference |
 | `notes` | string | no | Free text |
 | `cost` | number | no | Non-negative. Total cost of the rental — the UI displays this as total + per-day breakdown (e.g. `$450 · $75/day`) |
+| `costCurrency` | string | no | 3-letter ISO currency code. Defaults to `"USD"` |
 
 ---
 
@@ -145,6 +149,7 @@ Represents a rental car booking. Stored at the itinerary level in `rentalCars` (
 | `confirmationNumber` | string | no | Booking reference or confirmation code |
 | `notes` | string | no | Free text |
 | `cost` | number | no | Non-negative. Cost of this activity, transfer, or item |
+| `costCurrency` | string | no | 3-letter ISO currency code. Defaults to `"USD"` |
 
 ### Item type enum values
 
