@@ -24,6 +24,7 @@ Source of truth: `src/types/itinerary.ts` in the waymark project.
 | `stays` | HotelStay[] | no | Array of hotel stays (see below). Do NOT add `type: 'hotel'` items to day `items` — check-in/checkout timeline entries are generated at render time from this array. |
 | `transportLegs` | TransportLeg[] | no | Array of transport legs (see below). Preferred over `type: 'transport'` TripItems for flights, trains, ferries, and buses. Departure/arrival/in-transit entries are generated at render time. |
 | `rentalCars` | RentalCarReservation[] | no | Array of rental car reservations (see below). Pickup and dropoff timeline entries are generated at render time from this array. |
+| `pois` | PlaceOfInterest[] | no | Array of recommended places (see below). Used for advisor-curated restaurant/attraction lists separate from the day-by-day itinerary. |
 | `map` | object | no | `{ centerLat?, centerLng?, zoom? }` — all optional numbers |
 | `baseCurrency` | string | no | 3-letter ISO currency code, e.g. `"USD"`, `"EUR"`, `"GBP"`. Defaults to `"USD"` |
 
@@ -128,6 +129,26 @@ Represents a rental car booking. Stored at the itinerary level in `rentalCars` (
 | `notes` | string | no | Free text |
 | `cost` | number | no | Non-negative. Total cost of the rental — the UI displays this as total + per-day breakdown (e.g. `$450 · $75/day`) |
 | `costCurrency` | string | no | 3-letter ISO currency code. Defaults to `"USD"` |
+
+---
+
+## PlaceOfInterest
+
+Represents a recommended place (restaurant, attraction, shop, etc.) for the trip advisor to curate. Stored at the itinerary level in `pois`, separate from the day-by-day itinerary. Displayed on a dedicated POIs tab in the app.
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `id` | string | yes | Unique within the trip |
+| `name` | string | yes | Display name of the place |
+| `category` | enum | yes | One of: `restaurant`, `attraction`, `shop`, `outdoor`, `entertainment`, `other` |
+| `city` | string | yes | Free-form city name — used for the city filter |
+| `address` | string | no | Street address |
+| `lat` | number | no | WGS84 latitude (for map pin) |
+| `lng` | number | no | WGS84 longitude (for map pin) |
+| `website` | string | no | Full URL including `https://` |
+| `googleMapsUrl` | string | no | Full Google Maps URL |
+| `description` | string | no | Short description of the place |
+| `advisorNotes` | string | no | Travel advisor recommendation or tip |
 
 ---
 

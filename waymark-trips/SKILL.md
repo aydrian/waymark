@@ -136,6 +136,7 @@ Write the itinerary to a temp file. See `references/schema.md` for all field con
       "items": []
     }
   ],
+  "pois": [],
   "pinSalt": "SALT_FROM_ABOVE",
   "pinHash": "HASH_FROM_ABOVE",
   "updatedAt": "ISO_DATETIME"

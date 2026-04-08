@@ -31,6 +31,7 @@ grep ADMIN_API_TOKEN .dev.vars 2>/dev/null | cut -d= -f2
 | User intent | Operation |
 |---|---|
 | "add a place", "recommend X", "add POI" | [Add POI](#add-a-poi) |
+| "add from Google Maps", "import from maps", "paste maps URL" | [Add POI from Google Maps](#add-poi-from-google-maps) |
 | "update", "edit", "change", "add the website for" | [Update POI](#update-a-poi) |
 | "remove", "delete", "take out" | [Remove POI](#remove-a-poi) |
 | "list", "show", "what POIs", "what places" | [List POIs](#list-pois) |
@@ -76,6 +77,41 @@ curl -s -X POST \
 
 On `201`: show the user the POI was added and display the trip URL.
 On `422`: surface the `issues` array in plain language.
+
+---
+
+## Add POI from Google Maps
+
+Accepts a Google Maps URL (full or shortened) and extracts available place data.
+
+1. **Gather inputs from user:**
+   - Google Maps URL (short or long form)
+   - Category (required — cannot be auto-detected from URL)
+   - City (ask user to confirm or provide)
+
+2. **Resolve shortened URLs:**
+   ```bash
+   # Follow redirects to get the full URL
+   curl -sI "https://maps.app.goo.gl/XXXX" | grep -i location
+   ```
+
+3. **Extract from the full URL:**
+   - **Place name**: from `/place/NAME` path segment (URL-decoded, underscores→spaces)
+   - **Coordinates**: from `/@LAT,LNG` or `!3dLAT!4dLNG` patterns
+   - Example: `https://www.google.com/maps/place/Le_Sirenuse/@40.6283,14.4876`
+     - Name: "Le Sirenuse"
+     - Lat: 40.6283, Lng: 14.4876
+
+4. **Present extracted data to user for confirmation:**
+   - Name (auto-extracted or editable)
+   - Coordinates (auto-extracted or manual)
+   - Category (user-provided)
+   - City (user-provided)
+
+5. **Submit via Add POI endpoint** with confirmed fields.
+
+**Enhancement with Browser Tools:**
+If the user has configured a browser MCP tool (e.g., `agent-browser`), this operation can fetch the full Google Maps page and extract richer data: full address, phone, website, hours, description, photos. Without it, only URL-parseable data (name, coordinates) is available.
 
 ---
 
