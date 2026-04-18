@@ -7,7 +7,7 @@ const ADMIN_SESSION_DAYS = 7;
 const ADMIN_SENTINEL = 'admin';
 
 /** Returns true if the request carries a valid, unexpired admin session cookie */
-export async function getAdminSession(request: Request, cookieSecret: string): Promise<boolean> {
+export async function hasAdminSession(request: Request, cookieSecret: string): Promise<boolean> {
   const cookies = parseCookies(request.headers.get('Cookie'));
   const raw = cookies[ADMIN_COOKIE_NAME];
   if (!raw) return false;
@@ -15,12 +15,17 @@ export async function getAdminSession(request: Request, cookieSecret: string): P
   return tripId === ADMIN_SENTINEL;
 }
 
+/** Returns true if the request carries a valid, unexpired admin session cookie (alias for hasAdminSession) */
+export async function getAdminSession(request: Request, cookieSecret: string): Promise<boolean> {
+  return hasAdminSession(request, cookieSecret);
+}
+
 /** Returns a 302 → /admin Response when no valid session, null when authenticated */
 export async function requireAdminSession(
   request: Request,
   cookieSecret: string,
 ): Promise<Response | null> {
-  if (!(await getAdminSession(request, cookieSecret))) {
+  if (!(await hasAdminSession(request, cookieSecret))) {
     return new Response(null, { status: 302, headers: { Location: '/admin' } });
   }
   return null;
@@ -57,7 +62,7 @@ export async function requireAdminAccess(
   // Bearer token (existing CLI callers — unchanged behaviour)
   if (requireAdminAuth(request, adminToken) === null) return null;
   // Session cookie (browser admin UI)
-  if (await getAdminSession(request, cookieSecret)) return null;
+  if (await hasAdminSession(request, cookieSecret)) return null;
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
     status: 401,
     headers: { 'Content-Type': 'application/json' },

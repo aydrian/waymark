@@ -13,6 +13,7 @@ import type { ExpenseCategory, ExpenseItem } from '../../components/ExpensesTab.
 import { env } from 'cloudflare:workers';
 import { getTrip } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
+import { getAdminSession } from '../../lib/admin-auth';
 import {
   getTripStatus,
   getCurrentDay,
@@ -34,13 +35,17 @@ if (!trip) {
   return new Response(null, { status: 404 });
 }
 
-// 2. Check access cookie
+// 2. Check access cookie OR admin session
 const cookies = parseCookies(Astro.request.headers.get('Cookie'));
 const rawCookie = cookies[cookieName()];
 let authorized = false;
 if (rawCookie) {
   const tripId = await verifyTripCookie(rawCookie, env.COOKIE_SIGNING_SECRET);
   authorized = tripId === id;
+}
+// Allow admin access to any trip without PIN
+if (!authorized) {
+  authorized = await getAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
 }
 
 // 3. Compute trip state
