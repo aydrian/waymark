@@ -52,11 +52,12 @@ if (!hasCredential) {
           body: JSON.stringify({ challengeId, response }),
           credentials: 'same-origin',
         });
-        const data = await verifyRes.json() as { ok?: boolean; error?: string };
+        const data = await verifyRes.json() as { ok?: boolean; error?: string; detail?: string };
         if (data.ok) {
           window.location.href = '/admin/trips';
         } else {
-          throw new Error(data.error ?? 'Authentication failed');
+          const fullError = data.detail ? `${data.error}: ${data.detail}` : (data.error ?? 'Authentication failed');
+          throw new Error(fullError);
         }
       } catch (e) {
         errMsg.textContent = e instanceof Error ? e.message : 'Authentication failed';
