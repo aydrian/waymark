@@ -1,0 +1,154 @@
+---
+import { env } from 'cloudflare:workers';
+import { requireAdminSession } from '../../../lib/admin-auth';
+import TripLayout from '../../../layouts/TripLayout.astro';
+
+const redirect = await requireAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
+if (redirect) return redirect;
+---
+<TripLayout title="Admin — New Global POI">
+  <div class="max-w-2xl mx-auto px-4 py-10">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <a href="/admin/pois" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+          ← Global POIs
+        </a>
+        <h1 class="text-xl font-bold">New Global POI</h1>
+      </div>
+      <form method="POST" action="/api/admin/auth/logout">
+        <button type="submit" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Log out</button>
+      </form>
+    </div>
+
+    <form id="new-poi-form" class="flex flex-col gap-4">
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+          Name <span class="text-red-400">*</span>
+        </label>
+        <input name="name" required
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+          placeholder="Eiffel Tower" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            City <span class="text-red-400">*</span>
+          </label>
+          <input name="city" required
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            placeholder="Paris" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            Category <span class="text-red-400">*</span>
+          </label>
+          <select name="category" required
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500">
+            <option value="">Select category...</option>
+            <option value="restaurant">Restaurant</option>
+            <option value="attraction">Attraction</option>
+            <option value="shop">Shop</option>
+            <option value="outdoor">Outdoor</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+          Address
+        </label>
+        <input name="address"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+          placeholder="Champ de Mars, 5 Av. Anatole France" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            Website
+          </label>
+          <input name="website" type="url"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            placeholder="https://..." />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            Google Maps URL
+          </label>
+          <input name="googleMapsUrl" type="url"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            placeholder="https://maps.google.com/..." />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+          Description
+        </label>
+        <textarea name="description" rows="3"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          placeholder="Brief description of the place..."></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+          Advisor Notes <span class="text-[var(--color-text-muted)]">(visible to all trips using this POI)</span>
+        </label>
+        <textarea name="advisorNotes" rows="2"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          placeholder="Internal notes, recommendations, tips..."></textarea>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          Create Global POI
+        </button>
+      </div>
+    </form>
+    <p id="form-status" class="text-sm mt-3 hidden"></p>
+  </div>
+
+  <script>
+    const form = document.getElementById('new-poi-form') as HTMLFormElement;
+    const formStatus = document.getElementById('form-status')!;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
+      submitBtn.disabled = true;
+      formStatus.classList.add('hidden');
+
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(
+        Array.from(formData.entries()).map(([k, v]) => [k, v || undefined]).filter(([_, v]) => v !== undefined)
+      );
+
+      try {
+        const res = await fetch('/api/admin/pois', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          window.location.href = '/admin/pois';
+        } else {
+          formStatus.textContent = data.error || 'Failed to create POI';
+          formStatus.className = 'text-sm text-red-400';
+          formStatus.classList.remove('hidden');
+          submitBtn.disabled = false;
+        }
+      } catch {
+        formStatus.textContent = 'Network error';
+        formStatus.className = 'text-sm text-red-400';
+        formStatus.classList.remove('hidden');
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</TripLayout>
