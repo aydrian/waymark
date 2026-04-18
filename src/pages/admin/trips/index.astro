@@ -19,9 +19,9 @@ function getStatus(startDate: string, endDate: string): 'upcoming' | 'live' | 'c
 }
 
 const statusClass = {
-  upcoming: 'bg-blue-900/40 text-blue-300',
-  live: 'bg-green-900/40 text-green-300',
-  completed: 'bg-gray-800 text-gray-400',
+  upcoming: 'bg-[var(--color-trip-upcoming-bg)] text-[var(--color-trip-upcoming-text)] border border-[var(--color-trip-upcoming-border)]',
+  live: 'bg-[var(--color-trip-live-bg)] text-[var(--color-trip-live-text)] border border-[var(--color-trip-live-border)]',
+  completed: 'bg-[var(--color-trip-completed-bg)] text-[var(--color-trip-completed-text)] border border-[var(--color-trip-completed-border)]',
 } as const;
 ---
 <TripLayout title="Admin — Trips">

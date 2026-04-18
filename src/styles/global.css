@@ -59,6 +59,21 @@
   --color-status-canceled-text: #b91c1c;
   --color-status-canceled-border: #fecaca;
 
+  /* Trip Status: Upcoming (sky) */
+  --color-trip-upcoming-bg: #e0f2fe;
+  --color-trip-upcoming-text: #075985;
+  --color-trip-upcoming-border: #bae6fd;
+
+  /* Trip Status: Live (emerald) */
+  --color-trip-live-bg: #d1fae5;
+  --color-trip-live-text: #065f46;
+  --color-trip-live-border: #a7f3d0;
+
+  /* Trip Status: Completed (stone) */
+  --color-trip-completed-bg: #f5f4f0;
+  --color-trip-completed-text: #57534e;
+  --color-trip-completed-border: #e7e5e4;
+
   /* Error (red) */
   --color-error-bg: #fee2e2;
   --color-error-border: #fecaca;
@@ -122,6 +137,21 @@ html.dark {
   --color-status-canceled-bg: #7f1d1d;
   --color-status-canceled-text: #fca5a5;
   --color-status-canceled-border: #991b1b;
+
+  /* Trip Status: Upcoming */
+  --color-trip-upcoming-bg: #0c4a6e;
+  --color-trip-upcoming-text: #7dd3fc;
+  --color-trip-upcoming-border: #075985;
+
+  /* Trip Status: Live */
+  --color-trip-live-bg: #064e3b;
+  --color-trip-live-text: #6ee7b7;
+  --color-trip-live-border: #065f46;
+
+  /* Trip Status: Completed */
+  --color-trip-completed-bg: #292524;
+  --color-trip-completed-text: #a8a29e;
+  --color-trip-completed-border: #44403c;
 
   /* Error */
   --color-error-bg: #450a0a;
