@@ -61,8 +61,9 @@ const KV_BINDING = 'TRIPS';
 
 function kvGet(key: string, usePreview: boolean): unknown | null {
   const previewFlag = usePreview ? '--preview' : '--preview false';
+  const remoteFlag = usePreview ? '' : '--remote'; // Use --remote for production
   try {
-    const result = execSync(`wrangler kv key get ${key} --binding ${KV_BINDING} --local ${previewFlag}`, {
+    const result = execSync(`wrangler kv key get ${key} --binding ${KV_BINDING} ${remoteFlag} ${previewFlag}`.trim(), {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -75,16 +76,18 @@ function kvGet(key: string, usePreview: boolean): unknown | null {
 function kvPut(key: string, value: unknown, usePreview: boolean): void {
   if (DRY_RUN) return;
   const previewFlag = usePreview ? '--preview' : '--preview false';
+  const remoteFlag = usePreview ? '' : '--remote'; // Use --remote for production
   const jsonValue = JSON.stringify(value);
-  execSync(`wrangler kv key put ${key} '${jsonValue.replace(/'/g, "'\\''")}' --binding ${KV_BINDING} --local ${previewFlag}`, {
+  execSync(`wrangler kv key put ${key} '${jsonValue.replace(/'/g, "'\\''")}' --binding ${KV_BINDING} ${remoteFlag} ${previewFlag}`.trim(), {
     encoding: 'utf-8',
   });
 }
 
 function kvList(prefix: string, usePreview: boolean): string[] {
   const previewFlag = usePreview ? '--preview' : '--preview false';
+  const remoteFlag = usePreview ? '' : '--remote'; // Use --remote for production
   try {
-    const result = execSync(`wrangler kv key list --prefix ${prefix} --binding ${KV_BINDING} --local ${previewFlag}`, {
+    const result = execSync(`wrangler kv key list --prefix ${prefix} --binding ${KV_BINDING} ${remoteFlag} ${previewFlag}`.trim(), {
       encoding: 'utf-8',
     });
     const keys = JSON.parse(result);
