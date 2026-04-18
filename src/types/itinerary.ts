@@ -53,14 +53,14 @@ export const TransportLegSchema = z.object({
   status: ItemStatusSchema,
   // Departure
   departureDate: z.string(),                    // YYYY-MM-DD
-  departureTime: z.string(),                    // HH:MM
+  departureTime: z.string().optional(),           // HH:MM (may be empty for pending bookings)
   departureTimezone: z.string(),                // IANA e.g. "Europe/Paris"
   departureLocation: z.string().optional(),
   departureLat: z.number().optional(),
   departureLng: z.number().optional(),
   // Arrival
   arrivalDate: z.string(),                      // YYYY-MM-DD (explicit — handles overnight)
-  arrivalTime: z.string(),                      // HH:MM
+  arrivalTime: z.string().optional(),             // HH:MM (may be empty for pending bookings)
   arrivalTimezone: z.string(),                  // IANA e.g. "Europe/Rome"
   arrivalLocation: z.string().optional(),
   arrivalLat: z.number().optional(),
@@ -80,14 +80,14 @@ export const RentalCarReservationSchema = z.object({
   status: ItemStatusSchema,
   // Pickup
   pickupDate: z.string(),           // YYYY-MM-DD
-  pickupTime: z.string(),           // HH:MM
+  pickupTime: z.string().optional(), // HH:MM (may be empty for pending bookings)
   pickupTimezone: z.string(),       // IANA e.g. "America/New_York"
   pickupLocation: z.string().optional(),
   pickupLat: z.number().optional(),
   pickupLng: z.number().optional(),
   // Dropoff
   dropoffDate: z.string(),          // YYYY-MM-DD
-  dropoffTime: z.string(),          // HH:MM
+  dropoffTime: z.string().optional(), // HH:MM (may be empty for pending bookings)
   dropoffTimezone: z.string(),      // IANA
   dropoffLocation: z.string().optional(),
   dropoffLat: z.number().optional(),

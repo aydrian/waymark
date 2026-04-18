@@ -316,6 +316,94 @@ describe('getTransportItemsForDay cost forwarding', () => {
   });
 });
 
+describe('getTransportItemsForDay with empty times', () => {
+  it('handles train leg with empty departureTime and arrivalTime', () => {
+    // Issue #2: train leg with empty times caused 500 error
+    const trainLeg: TransportLeg = {
+      id: 'shinjuku-to-hakone',
+      type: 'train',
+      title: 'Odakyu Romancecar: Shinjuku → Hakone-Yumoto',
+      status: 'pending',
+      departureDate: '2026-06-15',
+      departureTime: undefined,
+      departureTimezone: 'Asia/Tokyo',
+      arrivalDate: '2026-06-15',
+      arrivalTime: undefined,
+      arrivalTimezone: 'Asia/Tokyo',
+      departureLocation: 'Shinjuku Station',
+      arrivalLocation: 'Hakone-Yumoto Station',
+      vendor: 'Odakyu Railway',
+      notes: 'Opens for booking ~May 15, 2026',
+    };
+
+    // Should not throw an error
+    const items = getTransportItemsForDay([trainLeg], '2026-06-15');
+    expect(items.length).toBeGreaterThan(0);
+
+    // Check departure item exists without time
+    const departure = items.find(i => i._legType === 'departure');
+    expect(departure).toBeDefined();
+    expect(departure?.startTime).toBeUndefined();
+    expect(departure?._tzAbbr).toBe('');
+
+    // Check arrival item exists without time
+    const arrival = items.find(i => i._legType === 'arrival');
+    expect(arrival).toBeDefined();
+    expect(arrival?.startTime).toBeUndefined();
+    expect(arrival?._tzAbbr).toBe('');
+
+    // Transit item should not be created without times
+    const transit = items.find(i => i._legType === 'transit');
+    expect(transit).toBeUndefined();
+  });
+
+  it('handles leg with only departure time (no arrival time)', () => {
+    const leg: TransportLeg = {
+      id: 'leg-partial',
+      type: 'flight',
+      title: 'JFK → LHR',
+      status: 'booked',
+      departureDate: '2026-03-22',
+      departureTime: '22:00',
+      departureTimezone: 'America/New_York',
+      arrivalDate: '2026-03-23',
+      arrivalTime: undefined,
+      arrivalTimezone: 'Europe/London',
+    };
+
+    const items = getTransportItemsForDay([leg], '2026-03-22');
+
+    // Departure should have time
+    const departure = items.find(i => i._legType === 'departure');
+    expect(departure?.startTime).toBe('22:00');
+
+    // No transit item since arrival time is missing
+    const transit = items.find(i => i._legType === 'transit');
+    expect(transit).toBeUndefined();
+  });
+
+  it('renders transit label without duration when times are missing', () => {
+    const leg: TransportLeg = {
+      id: 'leg-no-times',
+      type: 'train',
+      title: 'Paris → Lyon',
+      status: 'pending',
+      departureDate: '2026-03-22',
+      departureTime: undefined,
+      departureTimezone: 'Europe/Paris',
+      arrivalDate: '2026-03-22',
+      arrivalTime: undefined,
+      arrivalTimezone: 'Europe/Paris',
+    };
+
+    const items = getTransportItemsForDay([leg], '2026-03-22');
+
+    // Should not create transit item at all when times are missing
+    const transit = items.find(i => i._legType === 'transit');
+    expect(transit).toBeUndefined();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // getRentalCarItemsForDay
 // ---------------------------------------------------------------------------
@@ -414,5 +502,44 @@ describe('getRentalCarItemsForDay', () => {
       '2026-03-22',
     );
     expect(items.find(i => i._legType === 'pickup')?.notes).toBe('Class: SUV\nGPS included');
+  });
+
+  it('handles rental car with empty pickupTime', () => {
+    const rental = makeRentalCar({ pickupTime: undefined });
+    const items = getRentalCarItemsForDay([rental], '2026-03-22');
+    const pickup = items.find(i => i._legType === 'pickup');
+    expect(pickup).toBeDefined();
+    expect(pickup?.startTime).toBeUndefined();
+    expect(pickup?._tzAbbr).toBe('');
+  });
+
+  it('handles rental car with empty dropoffTime', () => {
+    const rental = makeRentalCar({ dropoffTime: undefined });
+    const items = getRentalCarItemsForDay([rental], '2026-03-25');
+    const dropoff = items.find(i => i._legType === 'dropoff');
+    expect(dropoff).toBeDefined();
+    expect(dropoff?.startTime).toBeUndefined();
+    expect(dropoff?._tzAbbr).toBe('');
+  });
+
+  it('handles rental car with both times empty', () => {
+    const rental = makeRentalCar({
+      pickupTime: undefined,
+      dropoffTime: undefined,
+      pickupDate: '2026-03-22',
+      dropoffDate: '2026-03-25',
+    });
+
+    // Pickup day
+    const pickupItems = getRentalCarItemsForDay([rental], '2026-03-22');
+    const pickup = pickupItems.find(i => i._legType === 'pickup');
+    expect(pickup).toBeDefined();
+    expect(pickup?.startTime).toBeUndefined();
+
+    // Dropoff day
+    const dropoffItems = getRentalCarItemsForDay([rental], '2026-03-25');
+    const dropoff = dropoffItems.find(i => i._legType === 'dropoff');
+    expect(dropoff).toBeDefined();
+    expect(dropoff?.startTime).toBeUndefined();
   });
 });

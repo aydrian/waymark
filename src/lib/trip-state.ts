@@ -145,7 +145,12 @@ export function getHotelMapItems(stays: HotelStay[], date: string | null): TripI
  * handles large UTC offsets (e.g. JST +9) and dateline crossings where the hour-only
  * approach fails.
  */
-function localDateTimeToMs(date: string, time: string, timezone: string): number {
+function localDateTimeToMs(date: string, time: string | undefined, timezone: string): number {
+  if (!time || time.trim() === '') {
+    // Return a timestamp based only on the date (start of day in UTC)
+    const [year, month, day] = date.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  }
   const approxUTC = new Date(`${date}T${time}:00Z`);
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
@@ -178,7 +183,10 @@ function formatDuration(ms: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-function getTimezoneAbbr(timezone: string, date: string, time: string): string {
+function getTimezoneAbbr(timezone: string, date: string, time: string | undefined): string {
+  if (!time || time.trim() === '') {
+    return '';
+  }
   const dt = new Date(`${date}T${time}:00Z`);
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
@@ -206,8 +214,11 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
   for (const leg of legs) {
     const depMs = localDateTimeToMs(leg.departureDate, leg.departureTime, leg.departureTimezone);
     const arrMs = localDateTimeToMs(leg.arrivalDate, leg.arrivalTime, leg.arrivalTimezone);
+    const hasTimes = leg.departureTime && leg.arrivalTime;
     const durationMs = arrMs - depMs;
-    const transitLabel = `${TRANSIT_LABELS[leg.type]} · ${formatDuration(durationMs)}`;
+    const transitLabel = hasTimes
+      ? `${TRANSIT_LABELS[leg.type]} · ${formatDuration(durationMs)}`
+      : TRANSIT_LABELS[leg.type];
     const sameDay = leg.departureDate === leg.arrivalDate;
 
     if (leg.departureDate === date) {
@@ -220,7 +231,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
         type: 'transport',
         title: `${leg.title} — Departure`,
         status: leg.status,
-        startTime: leg.departureTime,
+        startTime: leg.departureTime || undefined,
         location: leg.departureLocation,
         lat: leg.departureLat,
         lng: leg.departureLng,
@@ -234,7 +245,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
         _sortMs: depMs,
       });
 
-      if (sameDay) {
+      if (sameDay && hasTimes) {
         items.push({
           id: `transport-${leg.id}-transit`,
           type: 'transport',
@@ -249,7 +260,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
     }
 
     if (leg.arrivalDate === date) {
-      if (!sameDay) {
+      if (!sameDay && hasTimes) {
         // Overnight: in-transit block at top of arrival day
         items.push({
           id: `transport-${leg.id}-transit`,
@@ -270,7 +281,7 @@ export function getTransportItemsForDay(legs: TransportLeg[], date: string): Gen
         type: 'transport',
         title: `${leg.title} — Arrival`,
         status: leg.status,
-        startTime: leg.arrivalTime,
+        startTime: leg.arrivalTime || undefined,
         location: leg.arrivalLocation,
         lat: leg.arrivalLat,
         lng: leg.arrivalLng,
@@ -357,7 +368,7 @@ export function getRentalCarItemsForDay(
         type: 'transport',
         title: `${rental.title} — Pick-up`,
         status: rental.status,
-        startTime: rental.pickupTime,
+        startTime: rental.pickupTime || undefined,
         location: rental.pickupLocation,
         lat: rental.pickupLat,
         lng: rental.pickupLng,
@@ -383,7 +394,7 @@ export function getRentalCarItemsForDay(
         type: 'transport',
         title: `${rental.title} — Drop-off`,
         status: rental.status,
-        startTime: rental.dropoffTime,
+        startTime: rental.dropoffTime || undefined,
         location: rental.dropoffLocation,
         lat: rental.dropoffLat,
         lng: rental.dropoffLng,
