@@ -1,0 +1,72 @@
+---
+interface Props {
+  currentPage?: 'dashboard' | 'trips' | 'pois' | 'edit';
+}
+const { currentPage = 'dashboard' } = Astro.props;
+---
+
+<nav class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+  <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="/admin" class="font-bold text-lg hover:text-blue-400 transition-colors">Waymark Admin</a>
+      <div class="hidden sm:flex items-center gap-1">
+        <a
+          href="/admin/trips"
+          class:list={[
+            'px-3 py-1.5 rounded-lg text-sm transition-colors',
+            currentPage === 'trips' || currentPage === 'edit'
+              ? 'bg-blue-500/10 text-blue-400'
+              : 'hover:bg-[var(--color-bg-subtle)]'
+          ]}
+        >
+          Trips
+        </a>
+        <a
+          href="/admin/pois"
+          class:list={[
+            'px-3 py-1.5 rounded-lg text-sm transition-colors',
+            currentPage === 'pois'
+              ? 'bg-blue-500/10 text-blue-400'
+              : 'hover:bg-[var(--color-bg-subtle)]'
+          ]}
+        >
+          POIs
+        </a>
+      </div>
+    </div>
+    <form method="POST" action="/api/admin/auth/logout">
+      <button
+        type="submit"
+        class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+      >
+        Log out
+      </button>
+    </form>
+  </div>
+
+  <!-- Mobile nav -->
+  <div class="sm:hidden border-t border-[var(--color-border)] px-4 py-2 flex gap-2">
+    <a
+      href="/admin/trips"
+      class:list={[
+        'flex-1 text-center px-3 py-2 rounded-lg text-sm transition-colors',
+        currentPage === 'trips' || currentPage === 'edit'
+          ? 'bg-blue-500/10 text-blue-400'
+          : 'bg-[var(--color-bg-subtle)]'
+      ]}
+    >
+      Trips
+    </a>
+    <a
+      href="/admin/pois"
+      class:list={[
+        'flex-1 text-center px-3 py-2 rounded-lg text-sm transition-colors',
+        currentPage === 'pois'
+          ? 'bg-blue-500/10 text-blue-400'
+          : 'bg-[var(--color-bg-subtle)]'
+      ]}
+    >
+      POIs
+    </a>
+  </div>
+</nav>

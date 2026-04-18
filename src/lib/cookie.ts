@@ -77,3 +77,31 @@ export function buildSetCookieHeader(value: string): string {
   const maxAge = COOKIE_TTL_DAYS * 24 * 60 * 60;
   return `${COOKIE_NAME}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`;
 }
+
+const ADMIN_COOKIE_NAME = 'waymark_admin';
+const ADMIN_SENTINEL = 'admin';
+
+/** Check if request has valid trip access (trip cookie OR admin session) */
+export async function verifyTripAccess(
+  request: Request,
+  tripId: string,
+  cookieSecret: string,
+): Promise<boolean> {
+  const cookies = parseCookies(request.headers.get('Cookie'));
+
+  // Check trip-specific cookie
+  const tripCookie = cookies[COOKIE_NAME];
+  if (tripCookie) {
+    const verifiedTripId = await verifyTripCookie(decodeURIComponent(tripCookie), cookieSecret);
+    if (verifiedTripId === tripId) return true;
+  }
+
+  // Check admin session cookie
+  const adminCookie = cookies[ADMIN_COOKIE_NAME];
+  if (adminCookie) {
+    const verified = await verifyTripCookie(decodeURIComponent(adminCookie), cookieSecret);
+    if (verified === ADMIN_SENTINEL) return true;
+  }
+
+  return false;
+}

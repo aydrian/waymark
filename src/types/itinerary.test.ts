@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test';
 import {
   PoiCategorySchema, PlaceOfInterestSchema, ItinerarySchema,
-  HotelStaySchema, TransportLegSchema, TripItemSchema,
+  HotelStaySchema, TransportLegSchema, TripItemBaseSchema,
 } from './itinerary';
 
 describe('PoiCategorySchema', () => {
@@ -141,7 +141,7 @@ describe('TransportLegSchema cost field', () => {
   });
 });
 
-describe('TripItemSchema cost field', () => {
+describe('TripItemBaseSchema cost field', () => {
   const baseItem = {
     id: 'i1',
     type: 'activity',
@@ -150,14 +150,14 @@ describe('TripItemSchema cost field', () => {
   };
 
   it('accepts an item without cost', () => {
-    expect(TripItemSchema.safeParse(baseItem).success).toBe(true);
+    expect(TripItemBaseSchema.safeParse(baseItem).success).toBe(true);
   });
 
   it('accepts an item with cost', () => {
-    expect(TripItemSchema.safeParse({ ...baseItem, cost: 29 }).success).toBe(true);
+    expect(TripItemBaseSchema.safeParse({ ...baseItem, cost: 29 }).success).toBe(true);
   });
 
   it('rejects negative cost', () => {
-    expect(TripItemSchema.safeParse({ ...baseItem, cost: -1 }).success).toBe(false);
+    expect(TripItemBaseSchema.safeParse({ ...baseItem, cost: -1 }).success).toBe(false);
   });
 });

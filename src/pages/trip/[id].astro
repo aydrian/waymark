@@ -11,7 +11,7 @@ import PlacesTab from '../../components/PlacesTab.astro';
 import ExpensesTab from '../../components/ExpensesTab.astro';
 import type { ExpenseCategory, ExpenseItem } from '../../components/ExpensesTab.astro';
 import { env } from 'cloudflare:workers';
-import { getTrip } from '../../lib/kv';
+import { getTrip, getGlobalPOI } from '../../lib/kv';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie';
 import { getAdminSession } from '../../lib/admin-auth';
 import {
@@ -60,7 +60,34 @@ const currentDayNumber = currentDay?.dayNumber;
 // 4. Tab state
 const tabParam = Astro.url.searchParams.get('tab');
 const activeTab = tabParam === 'places' ? 'places' : tabParam === 'expenses' ? 'expenses' : 'itinerary';
-const pois = trip.pois;
+
+// 4a. Load POIs: fetch global POIs for trip's poiReferences
+const poiReferences = trip.poiReferences ?? [];
+const globalPOIs = await Promise.all(
+  poiReferences.map(async (ref) => {
+    const poi = await getGlobalPOI(env.TRIPS, ref.poiId);
+    return poi ? { ...poi, tripAdvisorNotes: ref.tripAdvisorNotes, addedAt: ref.addedAt } : null;
+  })
+);
+const tripPOIs = globalPOIs.filter((p): p is NonNullable<typeof p> => p !== null);
+
+// Also include legacy embedded POIs for backward compatibility during migration
+const legacyPOIs = trip.pois ?? [];
+const allPOIs = [...tripPOIs, ...legacyPOIs];
+
+// 4b. Collect assigned POIs from day items
+const assignedPOIs = trip.days.flatMap(day =>
+  day.items
+    .filter(item => item.type === 'poi-assignment')
+    .map(item => ({
+      ...item,
+      dayNumber: day.dayNumber,
+    }))
+);
+
+// Unassigned = POIs in trip list that don't have an assignment
+const assignedPoiIds = new Set(assignedPOIs.map(a => a.poiSnapshot.id));
+const unassignedPOIs = allPOIs.filter(p => !assignedPoiIds.has(p.id));
 
 // 4b. Expenses data aggregation with currency support
 
@@ -372,9 +399,9 @@ const localDateDisplay = isLive
         />
       )}
       <TripHeader trip={trip} />
-      <TripTabs tripId={id} activeTab={activeTab} poisCount={pois.length} expensesCount={expensesCount} />
+      <TripTabs tripId={id} activeTab={activeTab} poisCount={allPOIs.length} expensesCount={expensesCount} />
       {activeTab === 'places' ? (
-        <PlacesTab pois={pois} />
+        <PlacesTab unassignedPOIs={unassignedPOIs} assignedPOIs={assignedPOIs} tripDays={trip.days} tripId={id} />
       ) : activeTab === 'expenses' ? (
         <ExpensesTab
           categories={expenseCategories}

@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../../../lib/admin-auth';
-import { getTrip, putTrip } from '../../../../../../lib/kv';
-import { PlaceOfInterestSchema } from '../../../../../../types/itinerary';
+import { getTrip, putTrip, getGlobalPOI } from '../../../../../../lib/kv';
+import { TripPOIReferenceSchema } from '../../../../../../types/itinerary';
 
-const CreatePoiSchema = PlaceOfInterestSchema.omit({ id: true });
+const CreateTripPOIReferenceSchema = TripPOIReferenceSchema.omit({ addedAt: true });
 
+// POST /api/admin/trips/[id]/pois - Add a global POI reference to a trip
 export const POST: APIRoute = async ({ params, request }) => {
   const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
   if (authError) return authError;
@@ -36,7 +37,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   }
 
-  const result = CreatePoiSchema.safeParse(body);
+  const result = CreateTripPOIReferenceSchema.safeParse(body);
   if (!result.success) {
     return new Response(JSON.stringify({ error: 'Validation failed', issues: result.error.issues }), {
       status: 422,
@@ -44,15 +45,37 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   }
 
-  const poi = { ...result.data, id: crypto.randomUUID() };
+  // Verify the global POI exists
+  const globalPOI = await getGlobalPOI(env.TRIPS, result.data.poiId);
+  if (!globalPOI) {
+    return new Response(JSON.stringify({ error: 'Global POI not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Check if already added to this trip
+  const alreadyExists = trip.poiReferences?.some(ref => ref.poiId === result.data.poiId);
+  if (alreadyExists) {
+    return new Response(JSON.stringify({ error: 'POI already added to this trip' }), {
+      status: 409,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const reference = {
+    ...result.data,
+    addedAt: new Date().toISOString(),
+  };
+
   const updatedTrip = {
     ...trip,
-    pois: [...trip.pois, poi],
+    poiReferences: [...(trip.poiReferences ?? []), reference],
     updatedAt: new Date().toISOString(),
   };
   await putTrip(env.TRIPS, updatedTrip);
 
-  return new Response(JSON.stringify(poi), {
+  return new Response(JSON.stringify({ reference, globalPOI }), {
     status: 201,
     headers: { 'Content-Type': 'application/json' },
   });

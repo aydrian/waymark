@@ -1,4 +1,4 @@
-import { ItinerarySchema, type Itinerary, type TripSummary } from '../types/itinerary';
+import { ItinerarySchema, GlobalPOISchema, type Itinerary, type TripSummary, type GlobalPOI } from '../types/itinerary';
 
 const key = (id: string) => `trip:${id}`;
 
@@ -45,4 +45,42 @@ export async function listTrips(kv: KVNamespace): Promise<TripSummary[]> {
       travelers: t.travelers ?? [],
       updatedAt: t.updatedAt,
     }));
+}
+
+// Global POI functions
+const poiKey = (id: string) => `poi:${id}`;
+
+export async function getGlobalPOI(kv: KVNamespace, id: string): Promise<GlobalPOI | null> {
+  const raw = await kv.get(poiKey(id), 'text');
+  if (!raw) return null;
+  const parsed = GlobalPOISchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) {
+    console.error(`[kv] Schema parse failed for poi:${id}`, parsed.error.issues);
+    return null;
+  }
+  return parsed.data;
+}
+
+export async function putGlobalPOI(kv: KVNamespace, poi: GlobalPOI): Promise<void> {
+  await kv.put(poiKey(poi.id), JSON.stringify(poi));
+}
+
+export async function globalPOIExists(kv: KVNamespace, id: string): Promise<boolean> {
+  const val = await kv.get(poiKey(id), 'text');
+  return val !== null;
+}
+
+export async function deleteGlobalPOI(kv: KVNamespace, id: string): Promise<boolean> {
+  const exists = await globalPOIExists(kv, id);
+  if (!exists) return false;
+  await kv.delete(poiKey(id));
+  return true;
+}
+
+export async function listGlobalPOIs(kv: KVNamespace): Promise<GlobalPOI[]> {
+  const { keys } = await kv.list({ prefix: 'poi:' });
+  const pois = await Promise.all(
+    keys.map(({ name }) => getGlobalPOI(kv, name.slice('poi:'.length)))
+  );
+  return pois.filter((p): p is GlobalPOI => p !== null);
 }
