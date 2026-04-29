@@ -1,8 +1,10 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "scripts"],
   "compilerOptions": {
-    "types": ["@types/node"]
+    "baseUrl": ".",
+    "paths": {
+      "@waymark/shared": ["./packages/shared/src/index.ts"],
+      "@waymark/shared/types": ["./packages/shared/src/types/index.ts"],
+      "@waymark/shared/lib": ["./packages/shared/src/lib/index.ts"]
+    }
   }
 }

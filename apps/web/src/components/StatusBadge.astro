@@ -1,0 +1,18 @@
+---
+import type { ItemStatus } from '@waymark/shared/types';
+interface Props { status: ItemStatus }
+const { status } = Astro.props;
+
+const styles: Record<ItemStatus, string> = {
+  booked:   'bg-[var(--color-status-booked-bg)]   text-[var(--color-status-booked-text)]   border border-[var(--color-status-booked-border)]',
+  quoted:   'bg-[var(--color-status-quoted-bg)]   text-[var(--color-status-quoted-text)]   border border-[var(--color-status-quoted-border)]',
+  pending:  'bg-[var(--color-status-pending-bg)]  text-[var(--color-status-pending-text)]  border border-[var(--color-status-pending-border)]',
+  canceled: 'bg-[var(--color-status-canceled-bg)] text-[var(--color-status-canceled-text)] border border-[var(--color-status-canceled-border)]',
+};
+const labels: Record<ItemStatus, string> = {
+  booked: 'Booked', quoted: 'Quoted', pending: 'Pending', canceled: 'Canceled',
+};
+---
+<span class={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
+  {labels[status]}
+</span>

@@ -1,0 +1,141 @@
+---
+import { env } from 'cloudflare:workers';
+import { getAdminSession } from '../../lib/admin-auth.js';
+import { listTrips, listGlobalPOIs } from '@waymark/shared/lib';
+import TripLayout from '../../layouts/TripLayout.astro';
+import AdminNavbar from '../../components/AdminNavbar.astro';
+
+const isAuthenticated = await getAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
+
+// If not authenticated, we'll show the login form
+// If authenticated, fetch dashboard data
+let trips: Awaited<ReturnType<typeof listTrips>> = [];
+let pois: Awaited<ReturnType<typeof listGlobalPOIs>> = [];
+let upcomingTrips = 0;
+
+if (isAuthenticated) {
+  trips = await listTrips(env.TRIPS);
+  pois = await listGlobalPOIs(env.TRIPS);
+  const today = new Date().toISOString().slice(0, 10);
+  upcomingTrips = trips.filter(t => t.startDate >= today).length;
+}
+
+// Check if admin setup is needed
+const hasCredential = Boolean(await env.TRIPS.get('admin:credential', 'text'));
+if (!isAuthenticated && !hasCredential) {
+  return Astro.redirect('/admin/setup');
+}
+---
+
+<TripLayout title={isAuthenticated ? "Admin Dashboard" : "Admin Login"}>
+  {isAuthenticated ? (
+    <>
+      <AdminNavbar currentPage="dashboard" />
+      <main class="max-w-4xl mx-auto px-4 py-10">
+        <h1 class="text-2xl font-bold mb-6">Welcome back</h1>
+
+        <!-- Navigation Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <a
+            href="/admin/trips"
+            class="p-6 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] hover:border-blue-500/50 transition-colors group"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-semibold group-hover:text-blue-400 transition-colors">Trips</h2>
+              <span class="text-2xl">✈️</span>
+            </div>
+            <p class="text-sm text-[var(--color-text-secondary)]">
+              {trips.length} total{upcomingTrips > 0 ? ` • ${upcomingTrips} upcoming` : ''}
+            </p>
+          </a>
+
+          <a
+            href="/admin/pois"
+            class="p-6 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] hover:border-blue-500/50 transition-colors group"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-semibold group-hover:text-blue-400 transition-colors">Global POIs</h2>
+              <span class="text-2xl">📍</span>
+            </div>
+            <p class="text-sm text-[var(--color-text-secondary)]">{pois.length} places in library</p>
+          </a>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Quick Actions</h3>
+          <div class="flex flex-wrap gap-3">
+            <a
+              href="/admin/trips/new"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              + New Trip
+            </a>
+            <a
+              href="/admin/pois"
+              class="px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-subtle)] text-sm font-medium rounded-lg transition-colors"
+            >
+              Manage POIs
+            </a>
+          </div>
+        </div>
+      </main>
+    </>
+  ) : (
+    <!-- Login Form -->
+    <div class="min-h-screen flex items-center justify-center px-4">
+      <div class="w-full max-w-sm p-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div class="text-center mb-8">
+          <div class="text-5xl mb-3">🗺️</div>
+          <h1 class="text-2xl font-bold">Waymark Admin</h1>
+          <p class="mt-1 text-sm text-[var(--color-text-secondary)]">Authenticate to continue</p>
+        </div>
+        <button
+          id="signin-btn"
+          class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+        >
+          Sign in with passkey
+        </button>
+        <p id="error-msg" class="text-red-400 text-sm mt-3 text-center hidden"></p>
+      </div>
+    </div>
+    <script>
+      import { startAuthentication } from '@simplewebauthn/browser';
+
+      const btn = document.getElementById('signin-btn') as HTMLButtonElement;
+      const errMsg = document.getElementById('error-msg') as HTMLParagraphElement;
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Authenticating…';
+        errMsg.classList.add('hidden');
+        try {
+          const optRes = await fetch('/api/admin/auth/login-options', { method: 'POST' });
+          if (!optRes.ok) throw new Error((await optRes.json() as { error: string }).error);
+          const { options, challengeId } = await optRes.json() as { options: unknown; challengeId: string };
+
+          const response = await startAuthentication({ optionsJSON: options as Parameters<typeof startAuthentication>[0]['optionsJSON'] });
+
+          const verifyRes = await fetch('/api/admin/auth/login-verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ challengeId, response }),
+            credentials: 'same-origin',
+          });
+          const data = await verifyRes.json() as { ok?: boolean; error?: string; detail?: string };
+          if (data.ok) {
+            window.location.href = '/admin';
+          } else {
+            const fullError = data.detail ? `${data.error}: ${data.detail}` : (data.error ?? 'Authentication failed');
+            throw new Error(fullError);
+          }
+        } catch (e) {
+          errMsg.textContent = e instanceof Error ? e.message : 'Authentication failed';
+          errMsg.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Sign in with passkey';
+        }
+      });
+    </script>
+  )}
+</TripLayout>

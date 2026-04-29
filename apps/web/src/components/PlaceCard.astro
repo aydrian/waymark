@@ -1,0 +1,75 @@
+---
+import type { PlaceOfInterest } from '@waymark/shared/types';
+
+interface Props {
+  poi: PlaceOfInterest;
+}
+const { poi } = Astro.props;
+
+const CATEGORY_LABELS: Record<string, string> = {
+  restaurant: 'Restaurant',
+  attraction: 'Attraction',
+  shop: 'Shop',
+  outdoor: 'Outdoor',
+  entertainment: 'Entertainment',
+  other: 'Other',
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  restaurant: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  attraction: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  shop: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  outdoor: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+  entertainment: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  other: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+};
+---
+<div
+  class="poi-card rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+  data-city={poi.city}
+  data-category={poi.category}
+>
+  <div class="flex items-start justify-between gap-2">
+    <h3 class="font-semibold text-[var(--color-text-primary)]">{poi.name}</h3>
+    <span class={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_COLORS[poi.category] ?? CATEGORY_COLORS.other}`}>
+      {CATEGORY_LABELS[poi.category] ?? poi.category}
+    </span>
+  </div>
+
+  <p class="mt-0.5 text-xs text-[var(--color-text-muted)]">{poi.city}</p>
+
+  {poi.description && (
+    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{poi.description}</p>
+  )}
+
+  {poi.advisorNotes && (
+    <p class="mt-2 rounded-lg bg-[var(--color-bg-subtle)] px-3 py-2 text-xs text-[var(--color-text-secondary)] italic">
+      {poi.advisorNotes}
+    </p>
+  )}
+
+  {poi.address && (
+    <p class="mt-2 text-xs text-[var(--color-text-muted)]">{poi.address}</p>
+  )}
+
+  {(poi.website || poi.googleMapsUrl) && (
+    <div class="mt-3 flex flex-wrap gap-3">
+      {poi.website && (
+        <a
+          href={poi.website}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs text-[var(--color-text-secondary)] underline hover:text-[var(--color-text-primary)]"
+        >Website ↗</a>
+      )}
+      {poi.googleMapsUrl && (
+        <a
+          href={poi.googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs text-[var(--color-text-secondary)] underline hover:text-[var(--color-text-primary)]"
+        >Google Maps ↗</a>
+      )}
+    </div>
+  )}
+</div>

@@ -1,0 +1,478 @@
+---
+import TripLayout from '../../layouts/TripLayout.astro';
+import TripHeader from '../../components/TripHeader.astro';
+import DayFilter from '../../components/DayFilter.astro';
+import DaySection from '../../components/DaySection.astro';
+import TripMap from '../../components/TripMap.astro';
+import PinGateForm from '../../components/PinGateForm.astro';
+import LiveTripBanner from '../../components/LiveTripBanner.astro';
+import TripTabs from '../../components/TripTabs.astro';
+import PlacesTab from '../../components/PlacesTab.astro';
+import ExpensesTab from '../../components/ExpensesTab.astro';
+import type { ExpenseCategory, ExpenseItem } from '../../components/ExpensesTab.astro';
+import { env } from 'cloudflare:workers';
+import { getTrip, getGlobalPOI } from '@waymark/shared/lib';
+import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie.js';
+import { getAdminSession } from '../../lib/admin-auth.js';
+import {
+  getTripStatus,
+  getCurrentDay,
+  getVisibleDays,
+  getActiveStayForNight,
+  generateHotelTimelineItems,
+  getHotelMapItems,
+  getTransportItemsForDay,
+  getTransportMapItems,
+  getRentalCarItemsForDay,
+} from '../../lib/trip-state.js';
+import { getExchangeRate, convertCurrency, type ExchangeRateResult } from '../../lib/exchange-rates';
+
+const { id } = Astro.params as { id: string };
+
+// 1. Load trip
+const trip = await getTrip(env.TRIPS, id);
+if (!trip) {
+  return new Response(null, { status: 404 });
+}
+
+// 2. Check access cookie OR admin session
+const cookies = parseCookies(Astro.request.headers.get('Cookie'));
+const rawCookie = cookies[cookieName()];
+let authorized = false;
+if (rawCookie) {
+  const tripId = await verifyTripCookie(rawCookie, env.COOKIE_SIGNING_SECRET);
+  authorized = tripId === id;
+}
+// Allow admin access to any trip without PIN
+if (!authorized) {
+  authorized = await getAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
+}
+
+// 3. Compute trip state
+const now = new Date();
+const dayParam = Astro.url.searchParams.get('day');
+const { days: visibleDays, filter: activeFilter } = getVisibleDays(trip, dayParam, now);
+const tripStatus = getTripStatus(trip, now);
+const isLive = tripStatus === 'live';
+const currentDay = getCurrentDay(trip, now);
+const currentDayNumber = currentDay?.dayNumber;
+
+// 4. Tab state
+const tabParam = Astro.url.searchParams.get('tab');
+const activeTab = tabParam === 'places' ? 'places' : tabParam === 'expenses' ? 'expenses' : 'itinerary';
+
+// 4a. Load POIs: fetch global POIs for trip's poiReferences
+const poiReferences = trip.poiReferences ?? [];
+const globalPOIs = await Promise.all(
+  poiReferences.map(async (ref) => {
+    const poi = await getGlobalPOI(env.TRIPS, ref.poiId);
+    return poi ? { ...poi, tripAdvisorNotes: ref.tripAdvisorNotes, addedAt: ref.addedAt } : null;
+  })
+);
+const tripPOIs = globalPOIs.filter((p): p is NonNullable<typeof p> => p !== null);
+
+// Also include legacy embedded POIs for backward compatibility during migration
+const legacyPOIs = trip.pois ?? [];
+const allPOIs = [...tripPOIs, ...legacyPOIs];
+
+// 4b. Collect assigned POIs from day items
+const assignedPOIs = trip.days.flatMap(day =>
+  day.items
+    .filter(item => item.type === 'poi-assignment')
+    .map(item => ({
+      ...item,
+      dayNumber: day.dayNumber,
+    }))
+);
+
+// Unassigned = POIs in trip list that don't have an assignment
+const assignedPoiIds = new Set(assignedPOIs.map(a => a.poiSnapshot.id));
+const unassignedPOIs = allPOIs.filter(p => !assignedPoiIds.has(p.id));
+
+// 4b. Expenses data aggregation with currency support
+
+// Collect raw expenses with their currencies
+const rawExpenses: Array<{
+  id: string;
+  title: string;
+  status: import('../../types/itinerary').ItemStatus;
+  amount: number;
+  currency: string;
+  dateRange?: string;
+  vendor?: string;
+  category: string;
+}> = [];
+
+// Helper to get currency (defaults to USD if not specified)
+const getCurrency = (currency: string | undefined | null) => (currency && currency.length === 3 ? currency.toUpperCase() : 'USD');
+
+// Lodging: from stays
+(trip.stays ?? [])
+  .filter(s => s.cost != null)
+  .forEach(s => {
+    rawExpenses.push({
+      id: s.id,
+      title: s.title,
+      status: s.status,
+      amount: s.cost!,
+      currency: getCurrency(s.costCurrency),
+      dateRange: s.checkinDate === s.checkoutDate
+        ? s.checkinDate
+        : `${s.checkinDate} – ${s.checkoutDate}`,
+      vendor: s.vendor,
+      category: 'lodging',
+    });
+  });
+
+// Travel: from transport legs
+(trip.transportLegs ?? [])
+  .filter(l => l.cost != null)
+  .forEach(l => {
+    rawExpenses.push({
+      id: l.id,
+      title: l.title,
+      status: l.status,
+      amount: l.cost!,
+      currency: getCurrency(l.costCurrency),
+      dateRange: l.departureDate === l.arrivalDate
+        ? l.departureDate
+        : `${l.departureDate} – ${l.arrivalDate}`,
+      vendor: l.vendor,
+      category: 'travel',
+    });
+  });
+
+// Rental Cars
+(trip.rentalCars ?? [])
+  .filter(r => r.cost != null)
+  .forEach(r => {
+    rawExpenses.push({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      amount: r.cost!,
+      currency: getCurrency(r.costCurrency),
+      dateRange: r.pickupDate === r.dropoffDate
+        ? r.pickupDate
+        : `${r.pickupDate} – ${r.dropoffDate}`,
+      vendor: r.vendor,
+      category: 'rental-cars',
+    });
+  });
+
+// Trip items from days: group by type
+const dayItems = trip.days.flatMap(d => d.items);
+
+// Activities
+dayItems
+  .filter(i => i.type === 'activity' && i.cost != null)
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'activities',
+    });
+  });
+
+// Dining (restaurants)
+dayItems
+  .filter(i => i.type === 'restaurant' && i.cost != null)
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'dining',
+    });
+  });
+
+// Transfers
+dayItems
+  .filter(i => i.type === 'transfer' && i.cost != null)
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'transfers',
+    });
+  });
+
+// Other: hotel (day items), transport (day items), note
+dayItems
+  .filter(i => (i.type === 'hotel' || i.type === 'transport' || i.type === 'note') && i.cost != null)
+  .forEach(i => {
+    rawExpenses.push({
+      id: i.id,
+      title: i.title,
+      status: i.status,
+      amount: i.cost!,
+      currency: getCurrency(i.costCurrency),
+      vendor: i.vendor,
+      category: 'other',
+    });
+  });
+
+// Get unique currencies for exchange rate fetching
+const uniqueCurrencies = [...new Set(rawExpenses.map(e => e.currency))].filter(c => c !== 'USD');
+
+// Fetch exchange rates
+const exchangeRates: Record<string, ExchangeRateResult> = {};
+if (uniqueCurrencies.length > 0) {
+  await Promise.all(
+    uniqueCurrencies.map(async (currency) => {
+      const rate = await getExchangeRate(currency, 'USD', { EXCHANGE_RATE_CACHE: env.EXCHANGE_RATE_CACHE });
+      if (rate) {
+        exchangeRates[currency] = rate;
+      }
+    })
+  );
+}
+
+// Build expense categories with conversions
+const expensesCount = rawExpenses.length;
+const expenseCategories: ExpenseCategory[] = [];
+const categoryNames = ['lodging', 'travel', 'rental-cars', 'activities', 'dining', 'transfers', 'other'] as const;
+
+for (const catName of categoryNames) {
+  const items = rawExpenses.filter(e => e.category === catName);
+  if (items.length === 0) continue;
+
+  // Group by currency for subtotal calculation
+  const originalSubtotalsByCurrency: Record<string, number> = {};
+  let convertedSubtotalUSD = 0;
+
+  const expenseItems: ExpenseItem[] = items.map(item => {
+    const originalCost = { amount: item.amount, currency: item.currency };
+    let convertedCost: ExpenseItem['convertedCost'] = undefined;
+
+    // Calculate converted amount if exchange rate available
+    if (item.currency !== 'USD' && exchangeRates[item.currency]) {
+      const rate = exchangeRates[item.currency];
+      const usdAmount = convertCurrency(item.amount, rate.rate);
+      convertedCost = {
+        amount: usdAmount,
+        currency: 'USD',
+        rate: rate.rate,
+        rateSource: rate.source,
+        rateDate: rate.date,
+      };
+      convertedSubtotalUSD += usdAmount;
+    } else if (item.currency === 'USD') {
+      convertedSubtotalUSD += item.amount;
+    }
+
+    // Track original subtotal by currency
+    originalSubtotalsByCurrency[item.currency] = (originalSubtotalsByCurrency[item.currency] || 0) + item.amount;
+
+    return {
+      id: item.id,
+      title: item.title,
+      status: item.status,
+      originalCost,
+      convertedCost,
+      dateRange: item.dateRange,
+      vendor: item.vendor,
+    };
+  });
+
+  // Use the most common currency as the "original subtotal currency" or USD
+  const sortedCurrencies = Object.entries(originalSubtotalsByCurrency)
+    .sort((a, b) => b[1] - a[1])
+    .map(([currency]) => currency);
+  const primaryCurrency = sortedCurrencies[0] || 'USD';
+  const originalSubtotal = originalSubtotalsByCurrency[primaryCurrency] || 0;
+
+  expenseCategories.push({
+    name: catName,
+    items: expenseItems,
+    originalSubtotal: { amount: originalSubtotal, currency: primaryCurrency },
+    convertedSubtotal: { amount: convertedSubtotalUSD, currency: 'USD' },
+  });
+}
+
+// Calculate grand totals
+const grandTotalByCurrency: Record<string, number> = {};
+let grandTotalUSD = 0;
+
+for (const expense of rawExpenses) {
+  // Track by original currency
+  grandTotalByCurrency[expense.currency] = (grandTotalByCurrency[expense.currency] || 0) + expense.amount;
+
+  // Add to USD total
+  if (expense.currency === 'USD') {
+    grandTotalUSD += expense.amount;
+  } else if (exchangeRates[expense.currency]) {
+    grandTotalUSD += convertCurrency(expense.amount, exchangeRates[expense.currency].rate);
+  }
+}
+
+// Primary grand total currency (most common)
+const primaryGrandCurrency = Object.entries(grandTotalByCurrency)
+  .sort((a, b) => b[1] - a[1])
+  .map(([currency]) => currency)[0] || 'USD';
+
+const grandTotalOriginal = { amount: grandTotalByCurrency[primaryGrandCurrency] || grandTotalUSD, currency: primaryGrandCurrency };
+const grandTotalConverted = { amount: grandTotalUSD, currency: 'USD' };
+
+// Build exchange rates used list for display
+const exchangeRatesUsed = Object.entries(exchangeRates).map(([from, rate]) => ({
+  from,
+  to: 'USD',
+  rate: rate.rate,
+  source: rate.source,
+  date: rate.date,
+}));
+
+// 5. Hotel stay context per day
+const stays = trip.stays ?? [];
+const legs = trip.transportLegs ?? [];
+const rentalCars = trip.rentalCars ?? [];
+const dayHotelContext = visibleDays.map(day => ({
+  day,
+  activeStay: getActiveStayForNight(stays, day.date),
+  checkinToday: stays.find(s => s.checkinDate === day.date) ?? null,
+  checkoutToday: stays.find(s => s.checkoutDate === day.date) ?? null,
+  generatedItems: [
+    ...generateHotelTimelineItems(stays, day.date),
+    ...getTransportItemsForDay(legs, day.date),
+    ...getRentalCarItemsForDay(rentalCars, day.date),
+  ],
+}));
+
+// 6. Map items: regular items from visible days + hotel pins from stays
+const regularMapItems = visibleDays.flatMap(d => d.items);
+let hotelMapDate: string | null = null;
+if (activeFilter !== 'all') {
+  if (activeFilter === 'today') {
+    hotelMapDate = currentDay?.date ?? null;
+  } else {
+    hotelMapDate = trip.days.find(d => d.dayNumber === activeFilter)?.date ?? null;
+  }
+}
+const mapItems = [
+  ...regularMapItems,
+  ...getHotelMapItems(stays, hotelMapDate),
+  ...getTransportMapItems(legs, hotelMapDate),
+];
+
+// 7. Prev/next day links (only when viewing a single numeric day)
+const singleDay = typeof activeFilter === 'number' ? activeFilter : null;
+const prevDayNumber = singleDay !== null
+  ? trip.days.find(d => d.dayNumber === singleDay - 1)?.dayNumber
+  : undefined;
+const nextDayNumber = singleDay !== null
+  ? trip.days.find(d => d.dayNumber === singleDay + 1)?.dayNumber
+  : undefined;
+
+// 8. Formatted local date for live banner (e.g. "Wed, Mar 25")
+const localDateDisplay = isLive
+  ? new Intl.DateTimeFormat('en-US', {
+      timeZone: trip.timezone,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }).format(now)
+  : '';
+---
+<TripLayout title={trip.title}>
+  {!authorized ? (
+    <PinGateForm tripId={id} />
+  ) : (
+    <main>
+      {isLive && currentDayNumber !== undefined && (
+        <LiveTripBanner
+          currentDayNumber={currentDayNumber}
+          totalDays={trip.days.length}
+          localDate={localDateDisplay}
+          tripId={id}
+        />
+      )}
+      <TripHeader trip={trip} />
+      <TripTabs tripId={id} activeTab={activeTab} poisCount={allPOIs.length} expensesCount={expensesCount} />
+      {activeTab === 'places' ? (
+        <PlacesTab unassignedPOIs={unassignedPOIs} assignedPOIs={assignedPOIs} tripDays={trip.days} tripId={id} />
+      ) : activeTab === 'expenses' ? (
+        <ExpensesTab
+          categories={expenseCategories}
+          grandTotalOriginal={grandTotalOriginal}
+          grandTotalConverted={grandTotalConverted}
+          exchangeRatesUsed={exchangeRatesUsed}
+        />
+      ) : (
+        <>
+          <TripMap
+            items={mapItems}
+            centerLat={activeFilter === 'all' ? trip.map?.centerLat : undefined}
+            centerLng={activeFilter === 'all' ? trip.map?.centerLng : undefined}
+            zoom={activeFilter === 'all' ? trip.map?.zoom : undefined}
+          />
+          <DayFilter
+            days={trip.days}
+            activeFilter={activeFilter}
+            tripId={id}
+            isLive={isLive}
+            currentDayNumber={currentDayNumber}
+          />
+          <div class="py-4">
+            {dayHotelContext.length === 0 ? (
+              <p class="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                No days to show. <a href={`/trip/${id}`} class="underline">View all days</a>
+              </p>
+            ) : (
+              dayHotelContext.map(({ day, activeStay, checkinToday, checkoutToday, generatedItems }) => (
+                <DaySection
+                  day={day}
+                  isToday={day.dayNumber === currentDayNumber}
+                  activeStay={activeStay}
+                  checkinToday={checkinToday}
+                  checkoutToday={checkoutToday}
+                  generatedItems={generatedItems}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Prev/next navigation — only when viewing a single numeric day */}
+          {singleDay !== null && (prevDayNumber !== undefined || nextDayNumber !== undefined) && (
+            <nav
+              aria-label="Day navigation"
+              class="flex items-center justify-between px-4 pb-8 pt-2 text-sm sm:px-6"
+            >
+              <div>
+                {prevDayNumber !== undefined ? (
+                  <a
+                    href={`/trip/${id}?day=${prevDayNumber}`}
+                    class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
+                  >
+                    ← Day {prevDayNumber}
+                  </a>
+                ) : <span />}
+              </div>
+              <div>
+                {nextDayNumber !== undefined ? (
+                  <a
+                    href={`/trip/${id}?day=${nextDayNumber}`}
+                    class="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded"
+                  >
+                    Day {nextDayNumber} →
+                  </a>
+                ) : <span />}
+              </div>
+            </nav>
+          )}
+        </>
+      )}
+    </main>
+  )}
+</TripLayout>

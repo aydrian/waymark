@@ -1,0 +1,68 @@
+---
+import type { Day, TripItem, HotelStay } from '@waymark/shared/types';
+import type { GeneratedItem } from '../lib/trip-state';
+import TimelineItem from './TimelineItem.astro';
+import CurrentDayBadge from './CurrentDayBadge.astro';
+import HotelStayBanner from './HotelStayBanner.astro';
+
+interface Props {
+  day: Day;
+  isToday?: boolean;
+  activeStay?: HotelStay | null;
+  checkinToday?: HotelStay | null;
+  checkoutToday?: HotelStay | null;
+  generatedItems?: GeneratedItem[];
+}
+const {
+  day,
+  isToday = false,
+  activeStay = null,
+  checkinToday = null,
+  checkoutToday = null,
+  generatedItems = [],
+} = Astro.props;
+
+const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {
+  weekday: 'short', month: 'short', day: 'numeric',
+});
+
+const allItems: (TripItem | GeneratedItem)[] = [...day.items, ...generatedItems].sort((a, b) => {
+  const ga = a as GeneratedItem;
+  const gb = b as GeneratedItem;
+  // When both items have UTC sort keys, compare by absolute time (handles dateline crossings)
+  if (ga._sortMs !== undefined && gb._sortMs !== undefined) return ga._sortMs - gb._sortMs;
+  // Fall back to startTime string comparison
+  const ta = a.startTime ?? '99:99';
+  const tb = b.startTime ?? '99:99';
+  return ta < tb ? -1 : ta > tb ? 1 : 0;
+});
+
+const hasHotelBanner = activeStay !== null || checkoutToday !== null;
+---
+<section class="mb-6">
+  <div class="px-4 py-3 sm:px-6">
+    <div class="flex items-baseline gap-2 flex-wrap">
+      <span class="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Day {day.dayNumber}</span>
+      <span class="text-xs text-[var(--color-text-muted)]">{fmt(day.date)}</span>
+      {isToday && <CurrentDayBadge />}
+    </div>
+    <h2 class="text-base font-semibold text-[var(--color-text-primary)] mt-0.5">{day.title}</h2>
+    {day.notes && (
+      <p class="text-sm text-[var(--color-text-secondary)] mt-1">{day.notes}</p>
+    )}
+  </div>
+  {hasHotelBanner && (
+    <HotelStayBanner
+      activeStay={activeStay}
+      checkinToday={checkinToday}
+      checkoutToday={checkoutToday}
+    />
+  )}
+  <div class="bg-[var(--color-surface)] border-y border-[var(--color-border)] px-4 divide-y divide-[var(--color-border-subtle)] sm:px-6">
+    {allItems.length === 0 ? (
+      <p class="py-4 text-sm text-[var(--color-text-muted)] italic">No items for this day.</p>
+    ) : (
+      allItems.map(item => <TimelineItem item={item} />)
+    )}
+  </div>
+</section>
