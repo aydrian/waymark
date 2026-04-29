@@ -16,6 +16,13 @@ Mobile-first travel itinerary app built on Astro v6 + Cloudflare Workers. Itiner
 bun install
 ```
 
+This is a Bun monorepo with workspaces:
+- `apps/web` — Astro app (main itinerary site)
+- `packages/shared` — shared types and utilities
+- `packages/mcp-server` — MCP server for agent access
+
+All commands below should be run from `apps/web/` unless noted.
+
 ## Required Bindings & Secrets
 
 | Name | Type | Description |
@@ -55,6 +62,8 @@ The app runs at `http://localhost:4321`.
 The sample trip has ID `a8k3m2q9` and PIN `1234`.
 
 ```bash
+cd apps/web
+
 # 1. Generate the seed JSON
 bun scripts/seed.ts > /tmp/trip.json
 
@@ -69,6 +78,7 @@ open http://localhost:4321/trip/a8k3m2q9
 To generate a PIN hash for a new trip:
 
 ```bash
+cd apps/web
 bun scripts/hash-pin.ts <pin> <salt>
 # Example: bun scripts/hash-pin.ts mysecretpin abc123salt456
 ```
@@ -76,13 +86,18 @@ bun scripts/hash-pin.ts <pin> <salt>
 ## Build & Deploy
 
 ```bash
-# Build
+# Build (from root)
 bun run build
 
-# Deploy to Cloudflare Workers
+# Deploy to Cloudflare Workers (from root, runs: bun run --filter @waymark/web deploy)
+bun run deploy
+
+# Or manually from apps/web:
+cd apps/web
 wrangler deploy
 
-# Set secrets (one-time)
+# Set secrets (from apps/web, one-time)
+cd apps/web
 wrangler secret put ADMIN_API_TOKEN
 wrangler secret put COOKIE_SIGNING_SECRET
 ```
@@ -177,28 +192,18 @@ Once installed, an agent can manage trips on `https://waymark.itsaydrian.com` wi
 ## Project Structure
 
 ```
-src/
-  types/
-    itinerary.ts    # Zod schema + TypeScript types (single source of truth)
-    env.d.ts        # Cloudflare env bindings
-  lib/
-    kv.ts           # KV helpers
-    pin.ts          # PIN hash/verify (PBKDF2)
-    cookie.ts       # Cookie sign/verify (HMAC-SHA256)
-    auth.ts         # Admin bearer token auth
-  pages/
-    trip/[id].astro         # Public trip page (PIN gate + itinerary)
-    api/admin/trips/[id].ts # GET trip (admin)
-    api/admin/trips/upsert.ts  # POST upsert trip (admin)
-    api/admin/trips/delete.ts  # POST delete trip (admin)
-    api/trip-access/verify.ts  # POST verify PIN
-  layouts/
-    TripLayout.astro
-  components/
-    PinGateForm.astro, TripHeader.astro, DayFilter.astro,
-    DaySection.astro, HotelStayBanner.astro, TimelineItem.astro,
-    StatusBadge.astro, TripMap.astro
-scripts/
-  hash-pin.ts    # Generate PBKDF2 PIN hash
-  seed.ts        # Seed sample trips (Amalfi Coast live + Swiss Alps upcoming)
+apps/
+  web/
+    src/
+      components/   # Astro UI components
+      layouts/      # Page wrapper layouts
+      lib/          # KV helpers, auth, PIN/crypto utils
+      pages/        # File-based routing (trip/*, api/*)
+      types/        # Zod schemas + TypeScript types
+      scripts/      # hash-pin.ts, seed.ts
+    public/         # Static assets
+    wrangler.jsonc  # Cloudflare Workers config
+packages/
+  shared/         # Shared types and utilities (workspace package)
+  mcp-server/     # MCP server for agent access (workspace package)
 ```

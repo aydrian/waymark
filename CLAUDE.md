@@ -14,14 +14,20 @@ A server-rendered Astro app for sharing trip itineraries, deployed on Cloudflare
 
 ## Project Structure
 
+Monorepo with Bun workspaces:
+
 ```
-src/
-  components/   — Astro UI components
-  layouts/      — page wrapper layouts
-  lib/          — shared utilities and data access
-  pages/        — file-based routing (index, trip/*, api/*)
-  types/        — TypeScript types
-public/         — static assets
+apps/
+  web/          — Astro app (itinerary site)
+    src/
+      components/   — Astro UI components
+      layouts/      — page wrapper layouts
+      lib/          — KV helpers, auth, PIN/crypto
+      pages/        — file-based routing (trip/*, api/*)
+      types/        — Zod schemas + TypeScript types
+packages/
+  shared/       — Shared types/utilities (consumed by apps)
+  mcp-server/   — MCP server for agent access
 ```
 
 ## Cloudflare Notes
@@ -34,7 +40,7 @@ public/         — static assets
 
 ## Coding Style
 
-- TypeScript everywhere; use types from `src/types/`
+- TypeScript everywhere; use types from `packages/shared/src/types/` or `apps/web/src/types/`
 - Tailwind CSS v4 via Vite plugin — use utility classes, no CSS-in-JS
 - Zod for data validation at boundaries (API routes, KV reads)
 - Leaflet for map components (loaded client-side only)
