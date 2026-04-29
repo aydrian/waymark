@@ -1,0 +1,29 @@
+{
+  "name": "@waymark/mcp-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
+  },
+  "bin": {
+    "waymark-mcp": "./src/transports/stdio.ts"
+  },
+  "scripts": {
+    "dev:stdio": "bun src/transports/stdio.ts",
+    "dev:http": "bun src/transports/http.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@waymark/shared": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250410.0",
+    "@types/node": "^25.6.0",
+    "typescript": "^5.8.3"
+  }
+}

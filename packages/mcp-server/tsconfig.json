@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@waymark/shared": ["../shared/src/index.ts"],
+      "@waymark/shared/types": ["../shared/src/types/index.ts"],
+      "@waymark/shared/lib": ["../shared/src/lib/index.ts"]
+    },
+    "lib": ["ES2022", "DOM"],
+    "types": ["@cloudflare/workers-types", "bun"],
+    "noEmit": true
+  },
+  "include": ["src/**/*", "../shared/src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
