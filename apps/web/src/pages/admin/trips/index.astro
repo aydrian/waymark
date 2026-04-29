@@ -1,7 +1,7 @@
 ---
 import { env } from 'cloudflare:workers';
-import { requireAdminSession } from '../../../lib/admin-auth';
-import { listTrips } from '../../../lib/kv';
+import { requireAdminSession } from '../../../lib/admin-auth.js';
+import { listTrips } from '@waymark/shared/lib';
 import TripLayout from '../../../layouts/TripLayout.astro';
 import AdminNavbar from '../../../components/AdminNavbar.astro';
 
