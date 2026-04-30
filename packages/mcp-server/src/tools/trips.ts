@@ -1,18 +1,14 @@
 import {
-  getTrip,
-  putTrip,
-  deleteTrip,
-  listTrips,
   hashPin,
   generateSalt,
 } from '@waymark/shared/lib';
 import {
   ItinerarySchema,
   type Itinerary,
-  type TripSummary,
 } from '@waymark/shared/types';
 import { z } from 'zod';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { WaymarkBackend } from '../backends/types.js';
 
 // Tool definitions
 export const tripTools: Tool[] = [
@@ -174,11 +170,11 @@ const DeleteTripSchema = z.object({
 export async function handleTripTool(
   name: string,
   args: unknown,
-  kv: KVNamespace
+  backend: WaymarkBackend
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean } | undefined> {
   switch (name) {
     case 'list_trips': {
-      const trips = await listTrips(kv);
+      const trips = await backend.listTrips();
       return {
         content: [
           {
@@ -203,7 +199,7 @@ export async function handleTripTool(
         };
       }
 
-      const trip = await getTrip(kv, result.data.id);
+      const trip = await backend.getTrip(result.data.id);
       if (!trip) {
         return {
           content: [
@@ -263,7 +259,7 @@ export async function handleTripTool(
         updatedAt: now,
       };
 
-      await putTrip(kv, trip);
+      await backend.putTrip(trip);
 
       return {
         content: [
@@ -290,7 +286,7 @@ export async function handleTripTool(
       }
 
       // Check trip exists
-      const existing = await getTrip(kv, result.data.id);
+      const existing = await backend.getTrip(result.data.id);
       if (!existing) {
         return {
           content: [
@@ -303,7 +299,7 @@ export async function handleTripTool(
         };
       }
 
-      await putTrip(kv, result.data);
+      await backend.putTrip(result.data);
 
       return {
         content: [
@@ -329,7 +325,7 @@ export async function handleTripTool(
         };
       }
 
-      const deleted = await deleteTrip(kv, result.data.id);
+      const deleted = await backend.deleteTrip(result.data.id);
 
       return {
         content: [

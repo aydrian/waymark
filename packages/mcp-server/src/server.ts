@@ -9,15 +9,21 @@ import { z } from 'zod';
 import { tripTools, registerTripTools } from './tools/trips.js';
 import { poiTools, registerPoiTools } from './tools/pois.js';
 import { assignmentTools, registerAssignmentTools } from './tools/assignments.js';
+import { createKVBackend } from './backends/kv.js';
+import { createAdminApiBackend } from './backends/admin-api.js';
+import type { WaymarkBackend } from './backends/types.js';
 
-// Environment configuration schema
-const EnvSchema = z.object({
+// Environment configuration schemas
+const KVConfigSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string(),
   CLOUDFLARE_KV_NAMESPACE_ID: z.string(),
   CLOUDFLARE_API_TOKEN: z.string(),
 });
 
-export type WaymarkConfig = z.infer<typeof EnvSchema>;
+const AdminApiConfigSchema = z.object({
+  WAYMARK_BASE_URL: z.string().url(),
+  WAYMARK_ADMIN_TOKEN: z.string(),
+});
 
 // Combine all tools
 const allTools: Tool[] = [
@@ -27,6 +33,35 @@ const allTools: Tool[] = [
 ];
 
 export type WaymarkMCPServer = Server;
+
+/**
+ * Detect which backend mode to use based on available environment variables
+ */
+function detectBackendMode(): { mode: 'kv'; config: z.infer<typeof KVConfigSchema> } | { mode: 'admin-api'; config: z.infer<typeof AdminApiConfigSchema> } | null {
+  // Check for admin API mode first (preferred for agents)
+  const adminApiResult = AdminApiConfigSchema.safeParse(process.env);
+  if (adminApiResult.success) {
+    return { mode: 'admin-api', config: adminApiResult.data };
+  }
+
+  // Fall back to direct KV mode
+  const kvResult = KVConfigSchema.safeParse(process.env);
+  if (kvResult.success) {
+    return { mode: 'kv', config: kvResult.data };
+  }
+
+  return null;
+}
+
+/**
+ * Create a backend instance based on the detected mode
+ */
+function createBackend(mode: 'kv' | 'admin-api', config: unknown): WaymarkBackend {
+  if (mode === 'kv') {
+    return createKVBackend(config as z.infer<typeof KVConfigSchema>);
+  }
+  return createAdminApiBackend(config as z.infer<typeof AdminApiConfigSchema>);
+}
 
 /**
  * Create an MCP server instance with all Waymark tools registered
@@ -53,37 +88,35 @@ export function createServer(): Server {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
-    // Validate environment
-    const envResult = EnvSchema.safeParse(process.env);
-    if (!envResult.success) {
+    // Detect backend mode
+    const backendConfig = detectBackendMode();
+    if (!backendConfig) {
       return {
         content: [
           {
             type: 'text',
-            text: `Configuration error: Missing required environment variables. Please set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_KV_NAMESPACE_ID, and CLOUDFLARE_API_TOKEN.`,
+            text: `Configuration error: Missing required environment variables.\n\nFor admin API mode (recommended for agents):\n  Set WAYMARK_BASE_URL and WAYMARK_ADMIN_TOKEN\n\nFor direct KV mode:\n  Set CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_KV_NAMESPACE_ID, and CLOUDFLARE_API_TOKEN`,
           },
         ],
         isError: true,
       };
     }
 
-    const config = envResult.data;
-
-    // Create KV namespace binding using Cloudflare API
-    const kv = createKVNamespace(config);
+    // Create the appropriate backend
+    const backend = createBackend(backendConfig.mode, backendConfig.config);
 
     // Route to appropriate tool handler
     try {
       // Trip tools
-      const tripResult = await handleTripTool(name, args, kv);
+      const tripResult = await handleTripTool(name, args, backend);
       if (tripResult !== undefined) return tripResult;
 
       // POI tools
-      const poiResult = await handlePoiTool(name, args, kv);
+      const poiResult = await handlePoiTool(name, args, backend);
       if (poiResult !== undefined) return poiResult;
 
       // Assignment tools
-      const assignmentResult = await handleAssignmentTool(name, args, kv);
+      const assignmentResult = await handleAssignmentTool(name, args, backend);
       if (assignmentResult !== undefined) return assignmentResult;
 
       // Unknown tool
@@ -111,90 +144,6 @@ export function createServer(): Server {
   });
 
   return server;
-}
-
-/**
- * Create a KV namespace binding that uses Cloudflare API
- */
-function createKVNamespace(config: WaymarkConfig): KVNamespace {
-  const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${config.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${config.CLOUDFLARE_KV_NAMESPACE_ID}`;
-  const authHeader = `Bearer ${config.CLOUDFLARE_API_TOKEN}`;
-
-  return {
-    async get(key: string, type?: string): Promise<string | null> {
-      const response = await fetch(`${baseUrl}/values/${encodeURIComponent(key)}`, {
-        headers: { Authorization: authHeader },
-      });
-
-      if (response.status === 404) return null;
-      if (!response.ok) throw new Error(`KV get failed: ${response.statusText}`);
-
-      if (type === 'json') {
-        return response.json() as Promise<string>;
-      }
-      return response.text();
-    },
-
-    async put(key: string, value: string | ArrayBuffer | ReadableStream): Promise<void> {
-      // Convert value to Blob for FormData
-      let blob: Blob;
-      if (typeof value === 'string') {
-        blob = new Blob([value], { type: 'text/plain' });
-      } else if (value instanceof ArrayBuffer) {
-        blob = new Blob([value]);
-      } else {
-        // ReadableStream - convert to blob
-        const reader = value.getReader();
-        const chunks: ArrayBuffer[] = [];
-        while (true) {
-          const { done, value: chunk } = await reader.read();
-          if (done) break;
-          chunks.push(chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength));
-        }
-        blob = new Blob(chunks);
-      }
-
-      const formData = new FormData();
-      formData.append('value', blob);
-
-      const response = await fetch(`${baseUrl}/values/${encodeURIComponent(key)}`, {
-        method: 'PUT',
-        headers: { Authorization: authHeader },
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error(`KV put failed: ${response.statusText}`);
-    },
-
-    async delete(key: string): Promise<void> {
-      const response = await fetch(`${baseUrl}/values/${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-        headers: { Authorization: authHeader },
-      });
-
-      if (!response.ok) throw new Error(`KV delete failed: ${response.statusText}`);
-    },
-
-    async list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{ keys: { name: string; expiration?: number }[]; list_complete: boolean; cursor?: string }> {
-      const params = new URLSearchParams();
-      if (options?.prefix) params.append('prefix', options.prefix);
-      if (options?.limit) params.append('limit', options.limit.toString());
-      if (options?.cursor) params.append('cursor', options.cursor);
-
-      const response = await fetch(`${baseUrl}/keys?${params}`, {
-        headers: { Authorization: authHeader },
-      });
-
-      if (!response.ok) throw new Error(`KV list failed: ${response.statusText}`);
-
-      const data = await response.json() as { result: { name: string; expiration?: number }[]; result_info?: { cursor?: string } };
-      return {
-        keys: data.result,
-        list_complete: !data.result_info?.cursor,
-        cursor: data.result_info?.cursor,
-      };
-    },
-  } as KVNamespace;
 }
 
 // Import tool handlers

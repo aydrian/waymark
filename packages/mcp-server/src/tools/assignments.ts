@@ -1,14 +1,10 @@
 import {
-  getTrip,
-  putTrip,
-  getGlobalPOI,
-} from '@waymark/shared/lib';
-import {
   PoiAssignmentSchema,
   type PoiAssignment,
 } from '@waymark/shared/types';
 import { z } from 'zod';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { WaymarkBackend } from '../backends/types.js';
 
 // Tool definitions
 export const assignmentTools: Tool[] = [
@@ -164,7 +160,7 @@ const DeleteAssignmentSchema = z.object({
 export async function handleAssignmentTool(
   name: string,
   args: unknown,
-  kv: KVNamespace
+  backend: WaymarkBackend
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean } | undefined> {
   switch (name) {
     case 'list_assignments': {
@@ -181,7 +177,7 @@ export async function handleAssignmentTool(
         };
       }
 
-      const trip = await getTrip(kv, result.data.tripId);
+      const trip = await backend.getTrip(result.data.tripId);
       if (!trip) {
         return {
           content: [
@@ -233,7 +229,7 @@ export async function handleAssignmentTool(
 
       const { tripId, poiId, dayNumber, startTime, endTime, allDay, clientNotes } = result.data;
 
-      const trip = await getTrip(kv, tripId);
+      const trip = await backend.getTrip(tripId);
       if (!trip) {
         return {
           content: [
@@ -264,7 +260,7 @@ export async function handleAssignmentTool(
       const tripPOIRef = trip.poiReferences?.find(ref => ref.poiId === poiId);
 
       // Get global POI data
-      const globalPOI = await getGlobalPOI(kv, poiId);
+      const globalPOI = await backend.getGlobalPOI(poiId);
       if (!globalPOI) {
         return {
           content: [
@@ -316,7 +312,7 @@ export async function handleAssignmentTool(
         updatedAt: new Date().toISOString(),
       };
 
-      await putTrip(kv, updatedTrip);
+      await backend.putTrip(updatedTrip);
 
       return {
         content: [
@@ -344,7 +340,7 @@ export async function handleAssignmentTool(
 
       const { tripId, assignmentId, dayNumber, startTime, endTime, allDay, clientNotes } = result.data;
 
-      const trip = await getTrip(kv, tripId);
+      const trip = await backend.getTrip(tripId);
       if (!trip) {
         return {
           content: [
@@ -451,7 +447,7 @@ export async function handleAssignmentTool(
         updatedAt: new Date().toISOString(),
       };
 
-      await putTrip(kv, updatedTrip);
+      await backend.putTrip(updatedTrip);
 
       return {
         content: [
@@ -479,7 +475,7 @@ export async function handleAssignmentTool(
 
       const { tripId, assignmentId } = result.data;
 
-      const trip = await getTrip(kv, tripId);
+      const trip = await backend.getTrip(tripId);
       if (!trip) {
         return {
           content: [
@@ -523,7 +519,7 @@ export async function handleAssignmentTool(
         updatedAt: new Date().toISOString(),
       };
 
-      await putTrip(kv, updatedTrip);
+      await backend.putTrip(updatedTrip);
 
       return {
         content: [

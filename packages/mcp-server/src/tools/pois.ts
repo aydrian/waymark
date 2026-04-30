@@ -1,16 +1,11 @@
 import {
-  getGlobalPOI,
-  putGlobalPOI,
-  deleteGlobalPOI,
-  listGlobalPOIs,
-} from '@waymark/shared/lib';
-import {
   GlobalPOISchema,
   PoiCategorySchema,
   type GlobalPOI,
 } from '@waymark/shared/types';
 import { z } from 'zod';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { WaymarkBackend } from '../backends/types.js';
 
 // Tool definitions
 export const poiTools: Tool[] = [
@@ -154,11 +149,11 @@ const SearchPOIsSchema = z.object({
 export async function handlePoiTool(
   name: string,
   args: unknown,
-  kv: KVNamespace
+  backend: WaymarkBackend
 ): Promise<{ content: { type: string; text: string }[]; isError?: boolean } | undefined> {
   switch (name) {
     case 'list_pois': {
-      const pois = await listGlobalPOIs(kv);
+      const pois = await backend.listGlobalPOIs();
       // Sort by name for consistent ordering
       pois.sort((a, b) => a.name.localeCompare(b.name));
       return {
@@ -185,7 +180,7 @@ export async function handlePoiTool(
         };
       }
 
-      const poi = await getGlobalPOI(kv, result.data.id);
+      const poi = await backend.getGlobalPOI(result.data.id);
       if (!poi) {
         return {
           content: [
@@ -230,7 +225,7 @@ export async function handlePoiTool(
         updatedAt: now,
       };
 
-      await putGlobalPOI(kv, poi);
+      await backend.putGlobalPOI(poi);
 
       return {
         content: [
@@ -256,7 +251,7 @@ export async function handlePoiTool(
         };
       }
 
-      const existing = await getGlobalPOI(kv, result.data.id);
+      const existing = await backend.getGlobalPOI(result.data.id);
       if (!existing) {
         return {
           content: [
@@ -276,7 +271,7 @@ export async function handlePoiTool(
         updatedAt: now,
       };
 
-      await putGlobalPOI(kv, poi);
+      await backend.putGlobalPOI(poi);
 
       return {
         content: [
@@ -302,7 +297,7 @@ export async function handlePoiTool(
         };
       }
 
-      const deleted = await deleteGlobalPOI(kv, result.data.id);
+      const deleted = await backend.deleteGlobalPOI(result.data.id);
       if (!deleted) {
         return {
           content: [
@@ -339,7 +334,7 @@ export async function handlePoiTool(
         };
       }
 
-      const allPois = await listGlobalPOIs(kv);
+      const allPois = await backend.listGlobalPOIs();
       let filtered = allPois;
 
       if (result.data.city) {

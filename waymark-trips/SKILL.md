@@ -1,124 +1,108 @@
 ---
 name: waymark-trips
-description: Create, update, delete, and manage trips in the Waymark travel itinerary app. Use whenever the user wants to add a new trip, edit an existing itinerary, remove a trip, manage waymark trip data, build a trip JSON for waymark, or work with any waymark travel itinerary — even if they don't say "waymark" explicitly, trigger if context makes clear the target is a waymark deployment.
+description: Create, update, delete, and manage trips in the Waymark travel itinerary app using MCP tools. Use whenever the user wants to add a new trip, edit an existing itinerary, remove a trip, manage waymark trip data, build a trip JSON for waymark, or work with any waymark travel itinerary.
 ---
 
 # Waymark Trip Manager
 
-A skill for full CRUD management of trips in a Waymark deployment via its admin API.
+A skill for full CRUD management of trips in Waymark via MCP (Model Context Protocol) tools.
 
-Announce at the start: "I'm using the waymark-trips skill to handle this."
-
-Read `references/schema.md` for full field constraints and `references/api.md` for curl examples whenever you need detail beyond what's covered here.
+**Announce at the start:** "I'm using the waymark-trips skill with MCP tools to handle this."
 
 ---
 
-## Step 1: Resolve Configuration
+## Required Environment Variables
 
-You need two values before doing anything:
+The MCP server requires these environment variables:
 
-| Variable | How to find it |
+| Variable | Description |
 |---|---|
-| `WAYMARK_BASE_URL` | Check `$WAYMARK_BASE_URL` env var → default to `https://waymark.itsaydrian.com` |
-| `WAYMARK_ADMIN_TOKEN` | Check `$WAYMARK_ADMIN_TOKEN` env var → check `.dev.vars` in cwd if at waymark project root → ask the user |
+| `WAYMARK_BASE_URL` | The Waymark instance URL (e.g., `https://waymark.itsaydrian.com`) |
+| `WAYMARK_ADMIN_TOKEN` | Your admin API token for authentication |
 
-If both are set in the environment, proceed silently. Never echo the token in output.
-
-If the user is at the waymark project root, you can extract the token from `.dev.vars`:
-```bash
-grep ADMIN_API_TOKEN .dev.vars 2>/dev/null | cut -d= -f2
-```
+If these are not set, ask the user to provide them.
 
 ---
 
-## Step 2: Determine the Operation
+## Available MCP Tools
+
+| Tool | Purpose |
+|---|---|
+| `list_trips` | Get all trips summary |
+| `get_trip` | Get full trip details by ID |
+| `create_trip` | Create a new trip |
+| `update_trip` | Update an existing trip |
+| `delete_trip` | Delete a trip |
+| `list_assignments` | List POI assignments for a trip |
+| `create_assignment` | Assign a POI to a day |
+| `update_assignment` | Update an assignment |
+| `delete_assignment` | Remove an assignment |
+
+---
+
+## Determine the Operation
 
 | User intent | Operation |
 |---|---|
-| "create a trip", "add a new trip", "make a waymark trip" | [Create](#create-a-trip) |
-| "update", "edit", "change", "add a day to" | [Update](#update-a-trip) |
-| "delete", "remove" | [Delete](#delete-a-trip) |
-| "fetch", "show me", "get trip", "what's in trip X" | [Fetch](#fetch-a-trip) |
-| "list trips", "show all trips", "what trips exist", "discover trips" | [List](#list-trips) |
+| "create a trip", "add a new trip", "make a waymark trip" | [Create Trip](#create-trip) |
+| "update", "edit", "change", "add a day to" | [Update Trip](#update-trip) |
+| "delete", "remove" | [Delete Trip](#delete-trip) |
+| "fetch", "show me", "get trip", "what's in trip X" | [Get Trip](#get-trip) |
+| "list trips", "show all trips", "what trips exist" | [List Trips](#list-trips) |
+| "assign POI", "add to itinerary", "schedule" | [Create Assignment](#create-assignment) |
+| "list assignments", "what's scheduled" | [List Assignments](#list-assignments) |
 
 ---
 
 ## List Trips
 
-```bash
-curl -s \
-  -H "Authorization: Bearer $TOKEN" \
-  "$BASE_URL/api/admin/trips"
-```
+**Tool:** `list_trips` (no arguments)
 
-On 200: display a table of all trips (id, title, dates, destinations, travelers). Use this to discover trip IDs before fetching or updating.
+Invoke the tool and display the results as a table showing id, title, dates, destinations, and travelers.
 
 ---
 
-## Fetch a Trip
+## Get Trip
 
-```bash
-curl -s \
-  -H "Authorization: Bearer $TOKEN" \
-  "$BASE_URL/api/admin/trips/TRIP_ID"
+**Tool:** `get_trip`
+
+**Arguments:**
+```json
+{
+  "id": "TRIP_ID"
+}
 ```
 
-On 200: pretty-print the JSON and summarize key fields (title, dates, destinations, day count, item count).
-On 404: tell the user the trip ID was not found.
+Display the full trip JSON in a readable format. Summarize key fields (title, dates, destinations, day count, item count).
 
 ---
 
-## Create a Trip
+## Create Trip
 
-### Gather trip details
+**Tool:** `create_trip`
 
-Ask the user for any missing required fields:
+### Gather Required Fields
+
+Ask the user for:
 - Trip title
 - Start and end dates (YYYY-MM-DD)
-- Timezone (IANA format, e.g. `America/New_York`, `Europe/Rome`)
+- Timezone (IANA format, e.g., `America/New_York`, `Europe/Rome`)
 - Destinations (list of place names)
-- Days and their activities (can start minimal — the trip can be updated later)
-- PIN (a short code the traveler will use to access the trip)
+- Days structure (can start minimal)
+- PIN (a short code for traveler access)
 
-**Generate a trip ID** — must be exactly 8 lowercase alphanumeric characters:
+### Generate Trip ID
+
+Generate an 8-character lowercase alphanumeric ID:
 ```bash
 node -e "const c='abcdefghijklmnopqrstuvwxyz0123456789';let s='';for(let i=0;i<8;i++)s+=c[Math.floor(Math.random()*36)];console.log(s);"
 ```
 
-Show the proposed ID to the user and let them override it.
+Show the ID to the user and allow them to override it.
 
-### Generate the PIN hash
+### Build and Create
 
-Never store a plain PIN. Always derive salt + hash using PBKDF2-SHA256 (100k iterations):
-
-```bash
-# Step 1: generate a random 32-char hex salt (16 random bytes)
-SALT=$(node -e "const b=new Uint8Array(16);crypto.getRandomValues(b);console.log(Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(''));")
-
-# Step 2: derive the hash — substitute YOUR_PIN with the actual PIN
-HASH=$(node -e "
-(async()=>{
-  const pin='YOUR_PIN';
-  const salt='$SALT';
-  const enc=new TextEncoder();
-  const km=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveBits']);
-  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc.encode(salt),iterations:100000},km,256);
-  console.log(Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join(''));
-})();
-")
-```
-
-If the waymark project is available at the cwd, you can use the script instead of Step 2:
-```bash
-# bun scripts/hash-pin.ts <pin> <salt>  →  prints the 64-char hex hash
-HASH=$(bun scripts/hash-pin.ts YOUR_PIN "$SALT")
-```
-
-Both approaches produce identical output — the script uses the same algorithm.
-
-### Build the trip JSON
-
-Write the itinerary to a temp file. See `references/schema.md` for all field constraints. Minimum valid structure:
+Construct the trip object and call `create_trip`:
 
 ```json
 {
@@ -132,98 +116,113 @@ Write the itinerary to a temp file. See `references/schema.md` for all field con
     {
       "date": "YYYY-MM-DD",
       "dayNumber": 1,
-      "title": "Day 1 — Arrival",
+      "title": "Day 1",
       "items": []
     }
   ],
-  "pois": [],
-  "pinSalt": "SALT_FROM_ABOVE",
-  "pinHash": "HASH_FROM_ABOVE",
-  "updatedAt": "ISO_DATETIME"
+  "pin": "USER_PROVIDED_PIN"
 }
 ```
 
-Generate `updatedAt`:
-```bash
-node -e "console.log(new Date().toISOString())"
-```
+**Note:** The `pin` field will be automatically hashed by the MCP server. Do NOT generate pinSalt/pinHash manually.
 
-Each `TripItem` needs a unique `id` within its day — use short random strings:
-```bash
-node -e "console.log(Math.random().toString(36).slice(2,8))"
-```
-
-### POST to upsert
-
-```bash
-curl -s -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d @/tmp/waymark_trip.json \
-  "$BASE_URL/api/admin/trips/upsert"
-```
-
-On success (`201 {"ok":true,...}`), show the user:
-
+On success, show:
 ```
 Trip created!
   ID:  <id>
-  URL: <BASE_URL>/trip/<id>
+  URL: <WAYMARK_BASE_URL>/trip/<id>
   PIN: <the plain PIN>
 ```
 
-Remind the user: the traveler needs both the URL and the PIN. The PIN cannot be recovered from the API later (only its hash is stored).
+---
+
+## Update Trip
+
+**Tool:** `update_trip`
+
+1. First, fetch the existing trip with `get_trip`
+2. Apply the user's requested changes
+3. Set `updatedAt` to current ISO timestamp
+4. Call `update_trip` with the complete trip object
+
+**Important:** Include ALL fields from the original trip, not just the changes.
+
+If changing the PIN: just set the new `pin` field (plain text). The server will hash it automatically.
 
 ---
 
-## Update a Trip
+## Delete Trip
 
-Fetch the existing trip first (see [Fetch](#fetch-a-trip)), apply only the changes the user requested, set `updatedAt` to now, then POST to `/api/admin/trips/upsert`.
+**Tool:** `delete_trip`
 
-If the user wants to change the PIN: regenerate both `pinSalt` and `pinHash` following the steps above with the new PIN. The old PIN stops working immediately.
-
-Do not silently drop any existing `days` or `items` — confirm with the user before removing content.
-
----
-
-## Delete a Trip
-
-Confirm the trip ID with the user before deleting. Optionally fetch it first so the user can verify they have the right trip.
-
-```bash
-curl -s -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"id\":\"TRIP_ID\"}" \
-  "$BASE_URL/api/admin/trips/delete"
+**Arguments:**
+```json
+{
+  "id": "TRIP_ID"
+}
 ```
 
-- `{"ok":true,"deleted":true}` — trip was removed
-- `{"ok":true,"deleted":false}` — trip ID not found (already gone)
+Confirm the trip ID with the user before deleting. Optionally fetch it first for verification.
+
+---
+
+## Create Assignment
+
+**Tool:** `create_assignment`
+
+Assign a POI to a specific day in the itinerary.
+
+**Arguments:**
+```json
+{
+  "tripId": "TRIP_ID",
+  "poiId": "POI_UUID",
+  "dayNumber": 2,
+  "startTime": "19:00",
+  "endTime": "21:00",
+  "allDay": false,
+  "clientNotes": "Optional notes"
+}
+```
+
+Only `tripId`, `poiId`, and `dayNumber` are required. Times are optional (HH:MM format).
+
+---
+
+## List Assignments
+
+**Tool:** `list_assignments`
+
+**Arguments:**
+```json
+{
+  "tripId": "TRIP_ID",
+  "dayNumber": 2
+}
+```
+
+`dayNumber` is optional - omit to get all assignments for the trip.
 
 ---
 
 ## Error Handling
 
-| HTTP Status | Meaning | Action |
-|---|---|---|
-| 401 | Bad or missing token | Verify `WAYMARK_ADMIN_TOKEN` and re-prompt the user |
-| 400 | Malformed JSON | Check syntax before retrying |
-| 422 | Schema validation failed | Read the `issues` array and tell the user exactly which fields failed and why |
-| 404 | Trip not found | Confirm the ID with the user |
+The MCP tools return structured errors:
 
-For 422 errors, the response body contains a Zod `issues` array. Surface each issue's `path` and `message` in plain language. Common causes:
-- `id` not exactly 8 lowercase alphanumeric characters
-- `pinSalt` or `pinHash` empty or malformed
-- Missing required fields (`title`, `startDate`, `endDate`, `timezone`, `destinations`, `days`, `updatedAt`)
-- Invalid `type` or `status` enum value on an item
+| Error | Meaning | Action |
+|---|---|---|
+| Validation error | Invalid input data | Check the issues array and fix the specified fields |
+| Trip not found | 404 from API | Confirm the trip ID with the user |
+| Configuration error | Missing env vars | Ask user to set WAYMARK_BASE_URL and WAYMARK_ADMIN_TOKEN |
+
+For validation errors, the response includes an `issues` array with specific field paths and messages.
 
 ---
 
-## After Any Successful Write
+## After Any Write
 
-Always show the trip URL: `<BASE_URL>/trip/<id>`
+Always show the trip URL: `$WAYMARK_BASE_URL/trip/<id>`
 
-For creates: remind the user to share both the URL and PIN with the traveler.
-For updates: note which fields changed.
-For deletes: confirm the URL is now inaccessible.
+For creates: Remind the user to share both the URL and PIN with the traveler.
+For updates: Note which fields changed.
+For deletes: Confirm the URL is now inaccessible.

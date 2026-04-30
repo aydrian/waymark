@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "waymark": {
+      "command": "bun",
+      "args": ["run", "packages/mcp-server/src/index.ts"],
+      "env": {
+        "WAYMARK_BASE_URL": "https://waymark.itsaydrian.com"
+      }
+    }
+  }
+}
