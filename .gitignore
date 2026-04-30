@@ -1,7 +1,15 @@
 # build output
 dist/
+*.tsbuildinfo
+
 # generated types
 .astro/
+
+# compiled JS files in src (should only be in dist)
+apps/web/src/**/*.js
+apps/web/scripts/**/*.js
+packages/mcp-server/src/**/*.js
+packages/shared/src/**/*.js
 
 # dependencies
 node_modules/
