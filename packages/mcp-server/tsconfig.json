@@ -10,7 +10,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",
-    "baseUrl": ".",
+        "baseUrl": ".",
     "paths": {
       "@waymark/shared": ["../shared/src/index.ts"],
       "@waymark/shared/types": ["../shared/src/types/index.ts"],
@@ -18,7 +18,7 @@
     },
     "lib": ["ES2022", "DOM"],
     "types": ["@cloudflare/workers-types", "bun"],
-    "noEmit": true
+    "noEmit": false
   },
   "include": ["src/**/*", "../shared/src/**/*"],
   "exclude": ["node_modules", "dist"]

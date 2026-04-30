@@ -1,0 +1,27 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2025-04-30
+
+### Added
+
+- Initial release of @waymark/mcp-server
+- Trip management tools: `list_trips`, `get_trip`, `create_trip`, `update_trip`, `delete_trip`
+- POI management tools: `list_pois`, `get_poi`, `create_poi`, `update_poi`, `delete_poi`, `search_pois`
+- Assignment management tools: `list_assignments`, `create_assignment`, `update_assignment`, `delete_assignment`
+- Dual backend support:
+  - Admin API mode (recommended for agents): Connect via `WAYMARK_BASE_URL` and `WAYMARK_ADMIN_TOKEN`
+  - Direct KV mode: Connect via Cloudflare KV REST API using `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`, and `CLOUDFLARE_API_TOKEN`
+- Stdio transport for MCP client integration (Claude Desktop, OpenClaw, etc.)
+- HTTP/SSE transport for remote access
+- Full TypeScript type safety with Zod schema validation
+
+### Notes
+
+- This is the first public release. The API is considered stable but may evolve based on feedback.
+- The Admin API backend is recommended for most use cases as it provides better security and abstraction.
+- See README.md for detailed configuration and usage instructions.

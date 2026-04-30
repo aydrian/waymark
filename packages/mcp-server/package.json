@@ -1,24 +1,49 @@
 {
-  "name": "@waymark/mcp-server",
-  "version": "0.0.1",
-  "private": true,
+  "name": "@itsaydrian/waymark-mcp-server",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for Waymark travel itinerary management",
+  "private": false,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    ".": "./dist/mcp-server/src/index.js",
+    "./server": "./dist/mcp-server/src/server.js"
   },
   "bin": {
-    "waymark-mcp": "./src/transports/stdio.ts"
+    "waymark-mcp": "./dist/mcp-server/src/transports/stdio.js"
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "dev:stdio": "bun src/transports/stdio.ts",
     "dev:http": "bun src/transports/http.ts",
-    "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
   },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "waymark",
+    "travel",
+    "itinerary",
+    "claude"
+  ],
+  "author": "Aydrian Howard",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aydrian/waymark.git",
+    "directory": "packages/mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/aydrian/waymark/issues"
+  },
+  "homepage": "https://github.com/aydrian/waymark/tree/main/packages/mcp-server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "@waymark/shared": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

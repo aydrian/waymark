@@ -2,6 +2,31 @@
 
 Model Context Protocol (MCP) server for Waymark travel itinerary management.
 
+## Quick Start (OpenClaw / npx)
+
+The easiest way to use this server is via npx (requires Node.js 18+):
+
+```bash
+npx @itsaydrian/waymark-mcp-server
+```
+
+Or configure it in your MCP client (like OpenClaw or Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "waymark": {
+      "command": "npx",
+      "args": ["-y", "@itsaydrian/waymark-mcp-server"],
+      "env": {
+        "WAYMARK_BASE_URL": "https://waymark.itsaydrian.com",
+        "WAYMARK_ADMIN_TOKEN": "your-admin-token"
+      }
+    }
+  }
+}
+```
+
 ## Overview
 
 This MCP server exposes Waymark's trip and POI management APIs as structured tools for Claude agents and other MCP clients. It provides:
@@ -10,11 +35,14 @@ This MCP server exposes Waymark's trip and POI management APIs as structured too
 - **Global POI Management**: Manage Points of Interest that can be reused across trips
 - **Assignment Management**: Assign POIs to specific days and times in trip itineraries
 
-## Installation
+## Development Setup
+
+If you're contributing or want to run from source:
 
 ```bash
 cd packages/mcp-server
 bun install
+bun run build
 ```
 
 ## Configuration
