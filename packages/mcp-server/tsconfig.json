@@ -12,9 +12,9 @@
     "outDir": "./dist",
         "baseUrl": ".",
     "paths": {
-      "@waymark/shared": ["../shared/src/index.ts"],
-      "@waymark/shared/types": ["../shared/src/types/index.ts"],
-      "@waymark/shared/lib": ["../shared/src/lib/index.ts"]
+      "@itsaydrian/waymark-shared": ["../shared/src/index.ts"],
+      "@itsaydrian/waymark-shared/types": ["../shared/src/types/index.ts"],
+      "@itsaydrian/waymark-shared/lib": ["../shared/src/lib/index.ts"]
     },
     "lib": ["ES2022", "DOM"],
     "types": ["@cloudflare/workers-types", "bun"],

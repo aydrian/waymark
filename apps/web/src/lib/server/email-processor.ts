@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { getTrip, putTrip, listTrips } from '@waymark/shared/lib';
-import { ItemStatusSchema } from '@waymark/shared/types';
+import { getTrip, putTrip, listTrips } from '@itsaydrian/waymark-shared/lib';
+import { ItemStatusSchema } from '@itsaydrian/waymark-shared/types';
 
 export interface ProcessEmailInput {
   emailId: string;

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../lib/admin-auth.js';
-import { getTrip } from '@waymark/shared/lib';
+import { getTrip } from '@itsaydrian/waymark-shared/lib';
 
 export const GET: APIRoute = async ({ params, request }) => {
   const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);

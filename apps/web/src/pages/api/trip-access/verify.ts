@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { getTrip, verifyPin } from '@waymark/shared/lib';
+import { getTrip, verifyPin } from '@itsaydrian/waymark-shared/lib';
 import { signTripCookie, buildSetCookieHeader } from '../../../lib/cookie';
 import { z } from 'zod';
 

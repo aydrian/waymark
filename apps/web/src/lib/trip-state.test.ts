@@ -9,7 +9,7 @@ import {
   getTransportItemsForDay,
   getRentalCarItemsForDay,
 } from './trip-state';
-import type { Itinerary, Day, TransportLeg, RentalCarReservation } from '@waymark/shared/types';
+import type { Itinerary, Day, TransportLeg, RentalCarReservation } from '@itsaydrian/waymark-shared/types';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers

@@ -1,7 +1,7 @@
 import {
   PoiAssignmentSchema,
   type PoiAssignment,
-} from '@waymark/shared/types';
+} from '@itsaydrian/waymark-shared/types';
 import { z } from 'zod';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { WaymarkBackend } from '../backends/types.js';

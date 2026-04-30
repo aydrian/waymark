@@ -11,7 +11,7 @@ import PlacesTab from '../../components/PlacesTab.astro';
 import ExpensesTab from '../../components/ExpensesTab.astro';
 import type { ExpenseCategory, ExpenseItem } from '../../components/ExpensesTab.astro';
 import { env } from 'cloudflare:workers';
-import { getTrip, getGlobalPOI } from '@waymark/shared/lib';
+import { getTrip, getGlobalPOI } from '@itsaydrian/waymark-shared/lib';
 import { verifyTripCookie, cookieName, parseCookies } from '../../lib/cookie.js';
 import { getAdminSession } from '../../lib/admin-auth.js';
 import {

@@ -7,8 +7,8 @@ import {
   putGlobalPOI,
   deleteGlobalPOI,
   listGlobalPOIs,
-} from '@waymark/shared/lib';
-import type { Itinerary, TripSummary, GlobalPOI } from '@waymark/shared/types';
+} from '@itsaydrian/waymark-shared/lib';
+import type { Itinerary, TripSummary, GlobalPOI } from '@itsaydrian/waymark-shared/types';
 import type { WaymarkBackend } from './types.js';
 
 interface KVConfig {

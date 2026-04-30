@@ -1,4 +1,4 @@
-import type { Itinerary, TripSummary, GlobalPOI, PoiAssignment } from '@waymark/shared/types';
+import type { Itinerary, TripSummary, GlobalPOI, PoiAssignment } from '@itsaydrian/waymark-shared/types';
 
 /**
  * Abstract interface for Waymark data operations.

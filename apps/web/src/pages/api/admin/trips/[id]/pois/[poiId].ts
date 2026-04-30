@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../../../lib/admin-auth.js';
-import { getTrip, putTrip } from '@waymark/shared/lib';
-import { TripPOIReferenceSchema } from '@waymark/shared/types';
+import { getTrip, putTrip } from '@itsaydrian/waymark-shared/lib';
+import { TripPOIReferenceSchema } from '@itsaydrian/waymark-shared/types';
 import { z } from 'zod';
 
 const UpdateTripPOIReferenceSchema = z.object({

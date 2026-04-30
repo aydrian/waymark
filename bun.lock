@@ -15,9 +15,9 @@
       "dependencies": {
         "@astrojs/cloudflare": "^13.1.10",
         "@codemirror/lang-json": "^6.0.2",
+        "@itsaydrian/waymark-shared": "workspace:*",
         "@simplewebauthn/browser": "^13.3.0",
         "@simplewebauthn/server": "^13.3.0",
-        "@waymark/shared": "workspace:*",
         "astro": "^6.1.8",
         "codemirror": "^6.0.2",
         "leaflet": "^1.9.4",
@@ -35,14 +35,14 @@
       },
     },
     "packages/mcp-server": {
-      "name": "@waymark/mcp-server",
-      "version": "0.0.1",
+      "name": "@itsaydrian/waymark-mcp-server",
+      "version": "0.1.0",
       "bin": {
-        "waymark-mcp": "./src/transports/stdio.ts",
+        "waymark-mcp": "./dist/mcp-server/src/transports/stdio.js",
       },
       "dependencies": {
+        "@itsaydrian/waymark-shared": "^0.0.1",
         "@modelcontextprotocol/sdk": "^1.12.0",
-        "@waymark/shared": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {
@@ -52,13 +52,14 @@
       },
     },
     "packages/shared": {
-      "name": "@waymark/shared",
+      "name": "@itsaydrian/waymark-shared",
       "version": "0.0.1",
       "dependencies": {
         "zod": "^4.3.6",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20250410.0",
+        "typescript": "^5.8.3",
       },
     },
   },
@@ -234,6 +235,10 @@
     "@img/sharp-win32-ia32": ["@img/sharp-win32-ia32@0.34.5", "", { "os": "win32", "cpu": "ia32" }, "sha512-FV9m/7NmeCmSHDD5j4+4pNI8Cp3aW+JvLoXcTUo0IqyjSfAZJ8dIUmijx1qaJsIiU+Hosw6xM5KijAWRJCSgNg=="],
 
     "@img/sharp-win32-x64": ["@img/sharp-win32-x64@0.34.5", "", { "os": "win32", "cpu": "x64" }, "sha512-+29YMsqY2/9eFEiW93eqWnuLcWcufowXewwSNIT6UwZdUUCrM3oFjMWH/Z6/TMmb4hlFenmfAVbpWeup2jryCw=="],
+
+    "@itsaydrian/waymark-mcp-server": ["@itsaydrian/waymark-mcp-server@workspace:packages/mcp-server"],
+
+    "@itsaydrian/waymark-shared": ["@itsaydrian/waymark-shared@workspace:packages/shared"],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
@@ -422,10 +427,6 @@
     "@types/unist": ["@types/unist@3.0.3", "", {}, "sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q=="],
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
-
-    "@waymark/mcp-server": ["@waymark/mcp-server@workspace:packages/mcp-server"],
-
-    "@waymark/shared": ["@waymark/shared@workspace:packages/shared"],
 
     "@waymark/web": ["@waymark/web@workspace:apps/web"],
 

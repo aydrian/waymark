@@ -1,4 +1,4 @@
-import type { Itinerary, Day, HotelStay, TripItem, TransportLeg, RentalCarReservation } from '@waymark/shared/types';
+import type { Itinerary, Day, HotelStay, TripItem, TransportLeg, RentalCarReservation } from '@itsaydrian/waymark-shared/types';
 
 export type GeneratedItem = TripItem & {
   _legType?: 'departure' | 'arrival' | 'transit' | 'pickup' | 'dropoff';

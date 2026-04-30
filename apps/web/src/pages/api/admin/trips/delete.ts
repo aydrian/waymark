@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../lib/admin-auth.js';
-import { deleteTrip } from '@waymark/shared/lib';
+import { deleteTrip } from '@itsaydrian/waymark-shared/lib';
 import { z } from 'zod';
 
 const DeleteBodySchema = z.object({ id: z.string() });

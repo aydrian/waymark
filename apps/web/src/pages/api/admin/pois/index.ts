@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../lib/admin-auth.js';
-import { getGlobalPOI, putGlobalPOI, listGlobalPOIs } from '@waymark/shared/lib';
-import { GlobalPOISchema } from '@waymark/shared/types';
+import { getGlobalPOI, putGlobalPOI, listGlobalPOIs } from '@itsaydrian/waymark-shared/lib';
+import { GlobalPOISchema } from '@itsaydrian/waymark-shared/types';
 
 const CreateGlobalPOISchema = GlobalPOISchema.omit({ id: true, createdAt: true, updatedAt: true });
 

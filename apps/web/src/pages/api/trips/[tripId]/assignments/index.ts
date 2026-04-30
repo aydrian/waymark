@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { verifyTripAccess } from '../../../../../lib/cookie.js';
-import { getTrip, putTrip, getGlobalPOI } from '@waymark/shared/lib';
-import { PoiAssignmentSchema } from '@waymark/shared/types';
+import { getTrip, putTrip, getGlobalPOI } from '@itsaydrian/waymark-shared/lib';
+import { PoiAssignmentSchema } from '@itsaydrian/waymark-shared/types';
 
 const CreateAssignmentSchema = PoiAssignmentSchema.omit({
   type: true,

@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { verifyTripAccess } from '../../../../../lib/cookie.js';
-import { getTrip, putTrip } from '@waymark/shared/lib';
-import { PoiAssignmentSchema } from '@waymark/shared/types';
+import { getTrip, putTrip } from '@itsaydrian/waymark-shared/lib';
+import { PoiAssignmentSchema } from '@itsaydrian/waymark-shared/types';
 import { z } from 'zod';
 
 const UpdateAssignmentSchema = z.object({

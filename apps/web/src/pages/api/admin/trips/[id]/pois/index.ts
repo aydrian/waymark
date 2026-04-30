@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../../../lib/admin-auth.js';
-import { getTrip, putTrip, getGlobalPOI } from '@waymark/shared/lib';
-import { TripPOIReferenceSchema } from '@waymark/shared/types';
+import { getTrip, putTrip, getGlobalPOI } from '@itsaydrian/waymark-shared/lib';
+import { TripPOIReferenceSchema } from '@itsaydrian/waymark-shared/types';
 
 const CreateTripPOIReferenceSchema = TripPOIReferenceSchema.omit({ addedAt: true });
 

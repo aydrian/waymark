@@ -1,4 +1,4 @@
-import { ItinerarySchema, GlobalPOISchema, type Itinerary, type TripSummary, type GlobalPOI } from '@waymark/shared';
+import { ItinerarySchema, GlobalPOISchema, type Itinerary, type TripSummary, type GlobalPOI } from '@itsaydrian/waymark-shared';
 
 const key = (id: string) => `trip:${id}`;
 
