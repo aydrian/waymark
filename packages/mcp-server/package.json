@@ -1,6 +1,6 @@
 {
   "name": "@itsaydrian/waymark-mcp-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Model Context Protocol server for Waymark travel itinerary management",
   "private": false,
   "type": "module",
@@ -9,7 +9,7 @@
     "./server": "./dist/mcp-server/src/server.js"
   },
   "bin": {
-    "waymark-mcp": "./dist/mcp-server/src/transports/stdio.js"
+    "waymark-mcp": "dist/mcp-server/src/transports/stdio.js"
   },
   "files": [
     "dist/**/*",
