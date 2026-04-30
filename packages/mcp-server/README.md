@@ -50,16 +50,9 @@ bun run build
 Set the following environment variables:
 
 ```env
-CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
-CLOUDFLARE_KV_NAMESPACE_ID=your-kv-namespace-id
-CLOUDFLARE_API_TOKEN=your-cloudflare-api-token-with-kv-permissions
+WAYMARK_ADMIN_TOKEN=your-waymark-admin-token
+WAYMARK_BASE_URL=https://waymark.itsaydrian.com  # Optional, defaults to production
 ```
-
-### Cloudflare API Token
-
-Create a token with these permissions:
-- `Cloudflare KV:Edit`
-- `Cloudflare KV:Read`
 
 ## Usage
 
@@ -74,9 +67,7 @@ Add to your Claude Desktop configuration:
       "command": "bun",
       "args": ["/path/to/waymark/packages/mcp-server/src/transports/stdio.ts"],
       "env": {
-        "CLOUDFLARE_ACCOUNT_ID": "your-account-id",
-        "CLOUDFLARE_KV_NAMESPACE_ID": "your-namespace-id",
-        "CLOUDFLARE_API_TOKEN": "your-api-token"
+        "WAYMARK_ADMIN_TOKEN": "your-admin-token"
       }
     }
   }
@@ -150,8 +141,7 @@ Assign the Colosseum to day 2 of my Italy trip at 10:00 AM
 
 ## Architecture
 
-The server uses direct KV access via Cloudflare's REST API, providing:
-- **No HTTP overhead** - Direct data layer access
+The server uses the Waymark admin API for data access, providing:
 - **Type safety** - Zod schema validation for all inputs/outputs
 - **Discoverability** - Tools expose their schemas to MCP clients
 - **Error handling** - Structured error responses

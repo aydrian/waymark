@@ -116,17 +116,12 @@ class SSETransport {
 }
 
 async function main() {
-  // Validate environment variables
-  const requiredEnvVars = [
-    'CLOUDFLARE_ACCOUNT_ID',
-    'CLOUDFLARE_KV_NAMESPACE_ID',
-    'CLOUDFLARE_API_TOKEN',
-  ];
-
-  const missing = requiredEnvVars.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    console.error(`Missing required environment variables: ${missing.join(', ')}`);
-    console.error('Please set these variables before running the MCP server.');
+  // Validate required environment variable
+  if (!process.env.WAYMARK_ADMIN_TOKEN) {
+    console.error('Missing required environment variable: WAYMARK_ADMIN_TOKEN');
+    console.error('Please set WAYMARK_ADMIN_TOKEN to your Waymark admin API token.');
+    console.error('');
+    console.error('Optional: Set WAYMARK_BASE_URL to override the default (https://waymark.itsaydrian.com)');
     process.exit(1);
   }
 
