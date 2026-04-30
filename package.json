@@ -11,12 +11,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter @waymark/web dev",
-    "build": "bun run --filter @waymark/web build",
-    "preview": "bun run --filter @waymark/web preview",
-    "deploy": "bun run --filter @waymark/web deploy",
-    "test": "bun test",
-    "sync:kv": "bun run --filter @waymark/web sync:kv"
+    "web:dev": "bun run --filter @waymark/web dev",
+    "web:build": "bun run --filter @waymark/web build",
+    "web:preview": "bun run --filter @waymark/web preview",
+    "web:deploy": "bun run --filter @waymark/web deploy",
+    "mcp:dev:stdio": "bun run --filter @itsaydrian/waymark-mcp-server dev:stdio",
+    "mcp:dev:http": "bun run --filter @itsaydrian/waymark-mcp-server dev:http"
   },
   "devDependencies": {
     "@types/bun": "^1.3.13",

@@ -6,11 +6,12 @@ A server-rendered Astro app for sharing trip itineraries, deployed on Cloudflare
 
 ## Dev Commands
 
-- `bun run dev` — start local dev server
-- `bun run build` — production build
-- `bun run preview` — preview built output
-- `bun run deploy` — build + deploy to Cloudflare Workers
-- `bun test` — run tests
+- `bun run web:dev` — start local dev server
+- `bun run web:build` — production build
+- `bun run web:preview` — preview built output
+- `bun run web:deploy` — build + deploy to Cloudflare Workers
+- `bun run mcp:dev:stdio` — run MCP server (stdio transport)
+- `bun run mcp:dev:http` — run MCP server (HTTP transport)
 
 ## Project Structure
 
