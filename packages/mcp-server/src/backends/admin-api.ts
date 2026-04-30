@@ -2,16 +2,16 @@ import type { Itinerary, TripSummary, GlobalPOI } from '@itsaydrian/waymark-shar
 import type { WaymarkBackend } from './types.js';
 
 interface AdminApiConfig {
-  WAYMARK_BASE_URL: string;
-  WAYMARK_ADMIN_TOKEN: string;
+  baseUrl: string;
+  authToken: string;
 }
 
 /**
  * Create a backend that uses the Waymark admin API
  */
 export function createAdminApiBackend(config: AdminApiConfig): WaymarkBackend {
-  const baseUrl = config.WAYMARK_BASE_URL.replace(/\/$/, ''); // Remove trailing slash
-  const authHeader = `Bearer ${config.WAYMARK_ADMIN_TOKEN}`;
+  const baseUrl = config.baseUrl.replace(/\/$/, ''); // Remove trailing slash
+  const authHeader = `Bearer ${config.authToken}`;
 
   async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     const url = `${baseUrl}/api/admin${path}`;

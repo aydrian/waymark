@@ -9,6 +9,7 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationMap": true,
+    "composite": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "lib": ["ES2022"],

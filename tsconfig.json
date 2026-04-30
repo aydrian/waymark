@@ -1,10 +1,26 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
     "baseUrl": ".",
     "paths": {
       "@waymark/shared": ["./packages/shared/src/index.ts"],
       "@waymark/shared/types": ["./packages/shared/src/types/index.ts"],
       "@waymark/shared/lib": ["./packages/shared/src/lib/index.ts"]
     }
-  }
+  },
+  "include": [],
+  "exclude": ["node_modules", "dist", "**/*.d.ts"],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/mcp-server" }
+  ]
 }
