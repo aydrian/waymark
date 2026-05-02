@@ -1,6 +1,6 @@
 {
   "name": "@itsaydrian/waymark-mcp-server",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Model Context Protocol server for Waymark travel itinerary management",
   "private": false,
   "type": "module",
@@ -21,7 +21,10 @@
     "dev:http": "bun src/transports/http.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "mcp",
@@ -50,6 +53,8 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250410.0",
     "@types/node": "^25.6.0",
-    "typescript": "^5.8.3"
+    "@vitest/coverage-v8": "^4.1.5",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.5"
   }
 }
