@@ -6,6 +6,33 @@ import { GlobalPOISchema } from '@itsaydrian/waymark-shared/types';
 
 const UpdateGlobalPOISchema = GlobalPOISchema.omit({ id: true, createdAt: true, updatedAt: true }).partial();
 
+// GET /api/admin/pois/[poiId] - Get a single global POI
+export const GET: APIRoute = async ({ params, request }) => {
+  const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
+  if (authError) return authError;
+
+  const poiId = params.poiId;
+  if (!poiId) {
+    return new Response(JSON.stringify({ error: 'Missing poiId' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const poi = await getGlobalPOI(env.TRIPS, poiId);
+  if (!poi) {
+    return new Response(JSON.stringify({ error: 'POI not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(JSON.stringify(poi), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
+
 // PUT /api/admin/pois/[poiId] - Update global POI
 export const PUT: APIRoute = async ({ params, request }) => {
   const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
