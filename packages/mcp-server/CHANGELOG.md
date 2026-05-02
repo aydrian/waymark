@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-05-02
+
+### Fixed
+
+- `create_poi` tool now correctly uses POST endpoint instead of PUT, fixing the 404 "POI not found" error
+- Server now generates UUID and timestamps for new POIs instead of client-side generation
+
 ## [0.1.4] - 2026-04-30
 
 ### Fixed
