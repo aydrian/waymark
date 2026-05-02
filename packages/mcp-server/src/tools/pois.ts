@@ -217,15 +217,7 @@ export async function handlePoiTool(
         };
       }
 
-      const now = new Date().toISOString();
-      const poi: GlobalPOI = {
-        ...result.data,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await backend.putGlobalPOI(poi);
+      const poi = await backend.createGlobalPOI(result.data);
 
       return {
         content: [

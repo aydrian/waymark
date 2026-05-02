@@ -93,6 +93,13 @@ export function createAdminApiBackend(config: AdminApiConfig): WaymarkBackend {
       }
     },
 
+    async createGlobalPOI(poi: Omit<GlobalPOI, 'id' | 'createdAt' | 'updatedAt'>): Promise<GlobalPOI> {
+      return await fetchApi<GlobalPOI>('/pois', {
+        method: 'POST',
+        body: JSON.stringify(poi),
+      });
+    },
+
     async putGlobalPOI(poi: GlobalPOI): Promise<void> {
       const { id, ...poiData } = poi;
 

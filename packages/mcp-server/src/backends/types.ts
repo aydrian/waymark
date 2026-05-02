@@ -14,6 +14,7 @@ export interface WaymarkBackend {
   // POI operations
   listGlobalPOIs(): Promise<GlobalPOI[]>;
   getGlobalPOI(id: string): Promise<GlobalPOI | null>;
+  createGlobalPOI(poi: Omit<GlobalPOI, 'id' | 'createdAt' | 'updatedAt'>): Promise<GlobalPOI>;
   putGlobalPOI(poi: GlobalPOI): Promise<void>;
   deleteGlobalPOI(id: string): Promise<boolean>;
 }
