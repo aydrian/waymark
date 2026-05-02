@@ -1,6 +1,6 @@
 {
   "name": "@itsaydrian/waymark-mcp-server",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Model Context Protocol server for Waymark travel itinerary management",
   "private": false,
   "type": "module",
