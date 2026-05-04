@@ -3,125 +3,8 @@ import {
   type PoiAssignment,
 } from '@itsaydrian/waymark-shared/types';
 import { z } from 'zod';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WaymarkBackend } from '../backends/types.js';
-
-// Tool definitions
-export const assignmentTools: Tool[] = [
-  {
-    name: 'list_assignments',
-    description: 'List all POI assignments for a trip, optionally filtered by day number',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        tripId: {
-          type: 'string',
-          description: '8-character alphanumeric trip ID',
-        },
-        dayNumber: {
-          type: 'number',
-          description: 'Optional day number to filter by',
-        },
-      },
-      required: ['tripId'],
-    },
-  },
-  {
-    name: 'create_assignment',
-    description: 'Assign a POI to a specific day in a trip itinerary',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        tripId: {
-          type: 'string',
-          description: '8-character alphanumeric trip ID',
-        },
-        poiId: {
-          type: 'string',
-          description: 'UUID of the global POI to assign',
-        },
-        dayNumber: {
-          type: 'number',
-          description: 'Day number in the trip (1-based)',
-        },
-        startTime: {
-          type: 'string',
-          description: 'Optional start time (HH:MM format)',
-        },
-        endTime: {
-          type: 'string',
-          description: 'Optional end time (HH:MM format)',
-        },
-        allDay: {
-          type: 'boolean',
-          description: 'Whether this is an all-day assignment',
-          default: false,
-        },
-        clientNotes: {
-          type: 'string',
-          description: 'Optional notes for the client about this assignment',
-        },
-      },
-      required: ['tripId', 'poiId', 'dayNumber'],
-    },
-  },
-  {
-    name: 'update_assignment',
-    description: 'Update an existing POI assignment (time, day, or notes)',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        tripId: {
-          type: 'string',
-          description: '8-character alphanumeric trip ID',
-        },
-        assignmentId: {
-          type: 'string',
-          description: 'UUID of the assignment to update',
-        },
-        dayNumber: {
-          type: 'number',
-          description: 'New day number (optional)',
-        },
-        startTime: {
-          type: 'string',
-          description: 'New start time (HH:MM) (optional)',
-        },
-        endTime: {
-          type: 'string',
-          description: 'New end time (HH:MM) (optional)',
-        },
-        allDay: {
-          type: 'boolean',
-          description: 'Set as all-day assignment (optional)',
-        },
-        clientNotes: {
-          type: 'string',
-          description: 'New client notes (optional)',
-        },
-      },
-      required: ['tripId', 'assignmentId'],
-    },
-  },
-  {
-    name: 'delete_assignment',
-    description: 'Remove a POI assignment from a trip itinerary',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        tripId: {
-          type: 'string',
-          description: '8-character alphanumeric trip ID',
-        },
-        assignmentId: {
-          type: 'string',
-          description: 'UUID of the assignment to delete',
-        },
-      },
-      required: ['tripId', 'assignmentId'],
-    },
-  },
-];
 
 // Input schemas for validation
 const ListAssignmentsSchema = z.object({
@@ -155,15 +38,21 @@ const DeleteAssignmentSchema = z.object({
 });
 
 /**
- * Handle assignment-related tool calls
+ * Register all assignment-related tools with the MCP server
  */
-export async function handleAssignmentTool(
-  name: string,
-  args: unknown,
-  backend: WaymarkBackend
-): Promise<{ content: { type: string; text: string }[]; isError?: boolean } | undefined> {
-  switch (name) {
-    case 'list_assignments': {
+export function registerAssignmentTools(server: McpServer, createBackend: () => WaymarkBackend): void {
+  // list_assignments
+  server.registerTool(
+    'list_assignments',
+    {
+      description: 'List all POI assignments for a trip, optionally filtered by day number',
+      inputSchema: {
+        tripId: z.string().regex(/^[a-z0-9]{8}$/).describe('8-character alphanumeric trip ID'),
+        dayNumber: z.number().int().positive().optional().describe('Optional day number to filter by'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = ListAssignmentsSchema.safeParse(args);
       if (!result.success) {
         return {
@@ -212,8 +101,25 @@ export async function handleAssignmentTool(
         ],
       };
     }
+  );
 
-    case 'create_assignment': {
+  // create_assignment
+  server.registerTool(
+    'create_assignment',
+    {
+      description: 'Assign a POI to a specific day in a trip itinerary',
+      inputSchema: {
+        tripId: z.string().regex(/^[a-z0-9]{8}$/).describe('8-character alphanumeric trip ID'),
+        poiId: z.string().uuid().describe('UUID of the global POI to assign'),
+        dayNumber: z.number().int().positive().describe('Day number in the trip (1-based)'),
+        startTime: z.string().regex(/^\d{2}:\d{2}$/).optional().describe('Optional start time (HH:MM format)'),
+        endTime: z.string().regex(/^\d{2}:\d{2}$/).optional().describe('Optional end time (HH:MM format)'),
+        allDay: z.boolean().default(false).describe('Whether this is an all-day assignment'),
+        clientNotes: z.string().optional().describe('Optional notes for the client about this assignment'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = CreateAssignmentSchema.safeParse(args);
       if (!result.success) {
         return {
@@ -323,8 +229,25 @@ export async function handleAssignmentTool(
         ],
       };
     }
+  );
 
-    case 'update_assignment': {
+  // update_assignment
+  server.registerTool(
+    'update_assignment',
+    {
+      description: 'Update an existing POI assignment (time, day, or notes)',
+      inputSchema: {
+        tripId: z.string().regex(/^[a-z0-9]{8}$/).describe('8-character alphanumeric trip ID'),
+        assignmentId: z.string().uuid().describe('UUID of the assignment to update'),
+        dayNumber: z.number().int().positive().optional().describe('New day number (optional)'),
+        startTime: z.string().regex(/^\d{2}:\d{2}$/).optional().describe('New start time (HH:MM) (optional)'),
+        endTime: z.string().regex(/^\d{2}:\d{2}$/).optional().describe('New end time (HH:MM) (optional)'),
+        allDay: z.boolean().optional().describe('Set as all-day assignment (optional)'),
+        clientNotes: z.string().optional().describe('New client notes (optional)'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = UpdateAssignmentSchema.safeParse(args);
       if (!result.success) {
         return {
@@ -458,8 +381,20 @@ export async function handleAssignmentTool(
         ],
       };
     }
+  );
 
-    case 'delete_assignment': {
+  // delete_assignment
+  server.registerTool(
+    'delete_assignment',
+    {
+      description: 'Remove a POI assignment from a trip itinerary',
+      inputSchema: {
+        tripId: z.string().regex(/^[a-z0-9]{8}$/).describe('8-character alphanumeric trip ID'),
+        assignmentId: z.string().uuid().describe('UUID of the assignment to delete'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = DeleteAssignmentSchema.safeParse(args);
       if (!result.success) {
         return {
@@ -530,13 +465,5 @@ export async function handleAssignmentTool(
         ],
       };
     }
-
-    default:
-      return undefined;
-  }
-}
-
-// Placeholder for register function
-export function registerAssignmentTools(): void {
-  // Tools are registered centrally in server.ts
+  );
 }

@@ -4,113 +4,8 @@ import {
   type GlobalPOI,
 } from '@itsaydrian/waymark-shared/types';
 import { z } from 'zod';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WaymarkBackend } from '../backends/types.js';
-
-// Tool definitions
-export const poiTools: Tool[] = [
-  {
-    name: 'list_pois',
-    description: 'Get a list of all global POIs (Points of Interest)',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
-  {
-    name: 'get_poi',
-    description: 'Get details of a specific POI by its ID',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'POI UUID',
-        },
-      },
-      required: ['id'],
-    },
-  },
-  {
-    name: 'create_poi',
-    description: 'Create a new global POI that can be used across multiple trips',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'POI name' },
-        category: {
-          type: 'string',
-          enum: ['restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other'],
-          description: 'Category of the POI',
-        },
-        city: { type: 'string', description: 'City where the POI is located' },
-        address: { type: 'string', description: 'Optional street address' },
-        lat: { type: 'number', description: 'Optional latitude' },
-        lng: { type: 'number', description: 'Optional longitude' },
-        website: { type: 'string', description: 'Optional website URL' },
-        googleMapsUrl: { type: 'string', description: 'Optional Google Maps URL' },
-        description: { type: 'string', description: 'Optional description' },
-        advisorNotes: { type: 'string', description: 'Optional internal notes for advisors' },
-      },
-      required: ['name', 'category', 'city'],
-    },
-  },
-  {
-    name: 'update_poi',
-    description: 'Update an existing POI. Only provide fields that need to change.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'POI UUID' },
-        name: { type: 'string', description: 'POI name' },
-        category: {
-          type: 'string',
-          enum: ['restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other'],
-          description: 'Category of the POI',
-        },
-        city: { type: 'string', description: 'City where the POI is located' },
-        address: { type: 'string', description: 'Street address' },
-        lat: { type: 'number', description: 'Latitude' },
-        lng: { type: 'number', description: 'Longitude' },
-        website: { type: 'string', description: 'Website URL' },
-        googleMapsUrl: { type: 'string', description: 'Google Maps URL' },
-        description: { type: 'string', description: 'Description' },
-        advisorNotes: { type: 'string', description: 'Internal notes for advisors' },
-      },
-      required: ['id'],
-    },
-  },
-  {
-    name: 'delete_poi',
-    description: 'Delete a POI by its ID',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: 'POI UUID',
-        },
-      },
-      required: ['id'],
-    },
-  },
-  {
-    name: 'search_pois',
-    description: 'Search POIs by city, category, or name',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        city: { type: 'string', description: 'Filter by city name (optional)' },
-        category: {
-          type: 'string',
-          enum: ['restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other'],
-          description: 'Filter by category (optional)',
-        },
-        name: { type: 'string', description: 'Search by name substring (optional)' },
-      },
-    },
-  },
-];
 
 // Input schemas for validation
 const GetPOISchema = z.object({
@@ -144,15 +39,17 @@ const SearchPOIsSchema = z.object({
 });
 
 /**
- * Handle POI-related tool calls
+ * Register all POI-related tools with the MCP server
  */
-export async function handlePoiTool(
-  name: string,
-  args: unknown,
-  backend: WaymarkBackend
-): Promise<{ content: { type: string; text: string }[]; isError?: boolean } | undefined> {
-  switch (name) {
-    case 'list_pois': {
+export function registerPoiTools(server: McpServer, createBackend: () => WaymarkBackend): void {
+  // list_pois
+  server.registerTool(
+    'list_pois',
+    {
+      description: 'Get a list of all global POIs (Points of Interest)',
+    },
+    async () => {
+      const backend = createBackend();
       const pois = await backend.listGlobalPOIs();
       // Sort by name for consistent ordering
       pois.sort((a, b) => a.name.localeCompare(b.name));
@@ -165,28 +62,26 @@ export async function handlePoiTool(
         ],
       };
     }
+  );
 
-    case 'get_poi': {
-      const result = GetPOISchema.safeParse(args);
-      if (!result.success) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Validation error: ${JSON.stringify(result.error.issues, null, 2)}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const poi = await backend.getGlobalPOI(result.data.id);
+  // get_poi
+  server.registerTool(
+    'get_poi',
+    {
+      description: 'Get details of a specific POI by its ID',
+      inputSchema: {
+        id: z.string().uuid().describe('POI UUID'),
+      },
+    },
+    async ({ id }) => {
+      const backend = createBackend();
+      const poi = await backend.getGlobalPOI(id);
       if (!poi) {
         return {
           content: [
             {
               type: 'text',
-              text: `POI not found: ${result.data.id}`,
+              text: `POI not found: ${id}`,
             },
           ],
           isError: true,
@@ -202,8 +97,28 @@ export async function handlePoiTool(
         ],
       };
     }
+  );
 
-    case 'create_poi': {
+  // create_poi
+  server.registerTool(
+    'create_poi',
+    {
+      description: 'Create a new global POI that can be used across multiple trips',
+      inputSchema: {
+        name: z.string().describe('POI name'),
+        category: z.enum(['restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other']).describe('Category of the POI'),
+        city: z.string().describe('City where the POI is located'),
+        address: z.string().optional().describe('Optional street address'),
+        lat: z.number().optional().describe('Optional latitude'),
+        lng: z.number().optional().describe('Optional longitude'),
+        website: z.string().url().optional().describe('Optional website URL'),
+        googleMapsUrl: z.string().url().optional().describe('Optional Google Maps URL'),
+        description: z.string().optional().describe('Optional description'),
+        advisorNotes: z.string().optional().describe('Optional internal notes for advisors'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = CreatePOISchema.safeParse(args);
       if (!result.success) {
         return {
@@ -228,8 +143,29 @@ export async function handlePoiTool(
         ],
       };
     }
+  );
 
-    case 'update_poi': {
+  // update_poi
+  server.registerTool(
+    'update_poi',
+    {
+      description: 'Update an existing POI. Only provide fields that need to change.',
+      inputSchema: {
+        id: z.string().uuid().describe('POI UUID'),
+        name: z.string().optional().describe('POI name'),
+        category: z.enum(['restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other']).optional().describe('Category of the POI'),
+        city: z.string().optional().describe('City where the POI is located'),
+        address: z.string().optional().describe('Street address'),
+        lat: z.number().optional().describe('Latitude'),
+        lng: z.number().optional().describe('Longitude'),
+        website: z.string().url().optional().describe('Website URL'),
+        googleMapsUrl: z.string().url().optional().describe('Google Maps URL'),
+        description: z.string().optional().describe('Description'),
+        advisorNotes: z.string().optional().describe('Internal notes for advisors'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = UpdatePOISchema.safeParse(args);
       if (!result.success) {
         return {
@@ -274,28 +210,26 @@ export async function handlePoiTool(
         ],
       };
     }
+  );
 
-    case 'delete_poi': {
-      const result = DeletePOISchema.safeParse(args);
-      if (!result.success) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Validation error: ${JSON.stringify(result.error.issues, null, 2)}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const deleted = await backend.deleteGlobalPOI(result.data.id);
+  // delete_poi
+  server.registerTool(
+    'delete_poi',
+    {
+      description: 'Delete a POI by its ID',
+      inputSchema: {
+        id: z.string().uuid().describe('POI UUID'),
+      },
+    },
+    async ({ id }) => {
+      const backend = createBackend();
+      const deleted = await backend.deleteGlobalPOI(id);
       if (!deleted) {
         return {
           content: [
             {
               type: 'text',
-              text: `POI not found: ${result.data.id}`,
+              text: `POI not found: ${id}`,
             },
           ],
           isError: true,
@@ -311,8 +245,21 @@ export async function handlePoiTool(
         ],
       };
     }
+  );
 
-    case 'search_pois': {
+  // search_pois
+  server.registerTool(
+    'search_pois',
+    {
+      description: 'Search POIs by city, category, or name',
+      inputSchema: {
+        city: z.string().optional().describe('Filter by city name (optional)'),
+        category: z.enum(['restaurant', 'attraction', 'shop', 'outdoor', 'entertainment', 'other']).optional().describe('Filter by category (optional)'),
+        name: z.string().optional().describe('Search by name substring (optional)'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = SearchPOIsSchema.safeParse(args);
       if (!result.success) {
         return {
@@ -355,13 +302,5 @@ export async function handlePoiTool(
         ],
       };
     }
-
-    default:
-      return undefined;
-  }
-}
-
-// Placeholder for register function
-export function registerPoiTools(): void {
-  // Tools are registered centrally in server.ts
+  );
 }

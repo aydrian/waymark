@@ -1,153 +1,11 @@
-import {
-  hashPin,
-  generateSalt,
-} from '@itsaydrian/waymark-shared/lib';
+import { hashPin, generateSalt } from '@itsaydrian/waymark-shared/lib';
 import {
   ItinerarySchema,
   type Itinerary,
 } from '@itsaydrian/waymark-shared/types';
 import { z } from 'zod';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WaymarkBackend } from '../backends/types.js';
-
-// Tool definitions
-export const tripTools: Tool[] = [
-  {
-    name: 'list_trips',
-    description: 'Get a summary list of all trips in the system',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
-  {
-    name: 'get_trip',
-    description: 'Get full details of a trip by its ID',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: '8-character alphanumeric trip ID (e.g., a8k3m2q9)',
-        },
-      },
-      required: ['id'],
-    },
-  },
-  {
-    name: 'create_trip',
-    description: 'Create a new itinerary. If a plain `pin` field is provided, it will be hashed automatically.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: '8-character alphanumeric trip ID' },
-        title: { type: 'string', description: 'Trip title' },
-        startDate: { type: 'string', description: 'Start date (YYYY-MM-DD)' },
-        endDate: { type: 'string', description: 'End date (YYYY-MM-DD)' },
-        timezone: { type: 'string', description: 'IANA timezone (e.g., Europe/Rome)' },
-        destinations: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of destinations',
-        },
-        summary: { type: 'string', description: 'Optional trip summary' },
-        travelers: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Optional list of traveler names',
-        },
-        pin: { type: 'string', description: 'Plain PIN to be hashed (alternative to pinSalt/pinHash)' },
-        pinSalt: { type: 'string', description: 'Pre-generated PIN salt' },
-        pinHash: { type: 'string', description: 'Pre-computed PIN hash' },
-        days: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              date: { type: 'string', description: 'Date (YYYY-MM-DD)' },
-              dayNumber: { type: 'number', description: 'Day number in trip' },
-              title: { type: 'string', description: 'Day title' },
-              notes: { type: 'string', description: 'Optional notes' },
-              items: { type: 'array', description: 'Day items (can be empty)' },
-            },
-            required: ['date', 'dayNumber', 'title', 'items'],
-          },
-          description: 'Trip days structure',
-        },
-        notes: { type: 'string', description: 'Optional trip-level notes' },
-        stays: { type: 'array', description: 'Optional hotel stays' },
-        transportLegs: { type: 'array', description: 'Optional transport legs' },
-        rentalCars: { type: 'array', description: 'Optional rental car reservations' },
-        map: {
-          type: 'object',
-          properties: {
-            centerLat: { type: 'number' },
-            centerLng: { type: 'number' },
-            zoom: { type: 'number' },
-          },
-          description: 'Optional map configuration',
-        },
-        baseCurrency: { type: 'string', description: 'Base currency code (3 letters)', default: 'USD' },
-      },
-      required: ['id', 'title', 'startDate', 'endDate', 'timezone', 'destinations', 'days'],
-    },
-  },
-  {
-    name: 'update_trip',
-    description: 'Update an existing trip. Provide the complete trip object with all fields.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: '8-character alphanumeric trip ID' },
-        title: { type: 'string', description: 'Trip title' },
-        startDate: { type: 'string', description: 'Start date (YYYY-MM-DD)' },
-        endDate: { type: 'string', description: 'End date (YYYY-MM-DD)' },
-        timezone: { type: 'string', description: 'IANA timezone' },
-        destinations: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of destinations',
-        },
-        summary: { type: 'string', description: 'Trip summary' },
-        travelers: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'List of traveler names',
-        },
-        pinSalt: { type: 'string', description: 'PIN salt' },
-        pinHash: { type: 'string', description: 'PIN hash' },
-        days: {
-          type: 'array',
-          items: { type: 'object' },
-          description: 'Complete days array',
-        },
-        notes: { type: 'string', description: 'Trip notes' },
-        stays: { type: 'array', description: 'Hotel stays' },
-        transportLegs: { type: 'array', description: 'Transport legs' },
-        rentalCars: { type: 'array', description: 'Rental car reservations' },
-        poiReferences: { type: 'array', description: 'POI references' },
-        map: { type: 'object', description: 'Map configuration' },
-        updatedAt: { type: 'string', description: 'Last update timestamp (ISO)' },
-        baseCurrency: { type: 'string', description: 'Base currency code' },
-      },
-      required: ['id', 'title', 'startDate', 'endDate', 'timezone', 'destinations', 'pinSalt', 'pinHash', 'days', 'updatedAt'],
-    },
-  },
-  {
-    name: 'delete_trip',
-    description: 'Delete a trip by its ID',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: {
-          type: 'string',
-          description: '8-character alphanumeric trip ID',
-        },
-      },
-      required: ['id'],
-    },
-  },
-];
 
 // Input schemas for validation
 const GetTripSchema = z.object({
@@ -165,15 +23,17 @@ const DeleteTripSchema = z.object({
 });
 
 /**
- * Handle trip-related tool calls
+ * Register all trip-related tools with the MCP server
  */
-export async function handleTripTool(
-  name: string,
-  args: unknown,
-  backend: WaymarkBackend
-): Promise<{ content: { type: string; text: string }[]; isError?: boolean } | undefined> {
-  switch (name) {
-    case 'list_trips': {
+export function registerTripTools(server: McpServer, createBackend: () => WaymarkBackend): void {
+  // list_trips - no parameters
+  server.registerTool(
+    'list_trips',
+    {
+      description: 'Get a summary list of all trips in the system',
+    },
+    async () => {
+      const backend = createBackend();
       const trips = await backend.listTrips();
       return {
         content: [
@@ -184,28 +44,26 @@ export async function handleTripTool(
         ],
       };
     }
+  );
 
-    case 'get_trip': {
-      const result = GetTripSchema.safeParse(args);
-      if (!result.success) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Validation error: ${JSON.stringify(result.error.issues, null, 2)}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const trip = await backend.getTrip(result.data.id);
+  // get_trip
+  server.registerTool(
+    'get_trip',
+    {
+      description: 'Get full details of a trip by its ID',
+      inputSchema: {
+        id: z.string().regex(/^[a-z0-9]{8}$/).describe('8-character alphanumeric trip ID (e.g., a8k3m2q9)'),
+      },
+    },
+    async ({ id }) => {
+      const backend = createBackend();
+      const trip = await backend.getTrip(id);
       if (!trip) {
         return {
           content: [
             {
               type: 'text',
-              text: `Trip not found: ${result.data.id}`,
+              text: `Trip not found: ${id}`,
             },
           ],
           isError: true,
@@ -221,9 +79,41 @@ export async function handleTripTool(
         ],
       };
     }
+  );
 
-    case 'create_trip': {
-      let body = args as Record<string, unknown>;
+  // create_trip
+  server.registerTool(
+    'create_trip',
+    {
+      description: 'Create a new itinerary. If a plain `pin` field is provided, it will be hashed automatically.',
+      inputSchema: {
+        id: z.string().describe('8-character alphanumeric trip ID'),
+        title: z.string().describe('Trip title'),
+        startDate: z.string().describe('Start date (YYYY-MM-DD)'),
+        endDate: z.string().describe('End date (YYYY-MM-DD)'),
+        timezone: z.string().describe('IANA timezone (e.g., Europe/Rome)'),
+        destinations: z.array(z.string()).describe('List of destinations'),
+        summary: z.string().optional().describe('Optional trip summary'),
+        travelers: z.array(z.string()).optional().describe('Optional list of traveler names'),
+        pin: z.string().optional().describe('Plain PIN to be hashed (alternative to pinSalt/pinHash)'),
+        pinSalt: z.string().optional().describe('Pre-generated PIN salt'),
+        pinHash: z.string().optional().describe('Pre-computed PIN hash'),
+        days: z.array(z.any()).describe('Trip days structure'),
+        notes: z.string().optional().describe('Optional trip-level notes'),
+        stays: z.array(z.any()).optional().describe('Optional hotel stays'),
+        transportLegs: z.array(z.any()).optional().describe('Optional transport legs'),
+        rentalCars: z.array(z.any()).optional().describe('Optional rental car reservations'),
+        map: z.object({
+          centerLat: z.number(),
+          centerLng: z.number(),
+          zoom: z.number(),
+        }).optional().describe('Optional map configuration'),
+        baseCurrency: z.string().default('USD').describe('Base currency code (3 letters)'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
+      let body: Record<string, unknown> = { ...args };
 
       // Handle plain PIN hashing if provided
       if (body?.pin && typeof body.pin === 'string' && body.pin.length > 0) {
@@ -270,8 +160,37 @@ export async function handleTripTool(
         ],
       };
     }
+  );
 
-    case 'update_trip': {
+  // update_trip
+  server.registerTool(
+    'update_trip',
+    {
+      description: 'Update an existing trip. Provide the complete trip object with all fields.',
+      inputSchema: {
+        id: z.string().describe('8-character alphanumeric trip ID'),
+        title: z.string().describe('Trip title'),
+        startDate: z.string().describe('Start date (YYYY-MM-DD)'),
+        endDate: z.string().describe('End date (YYYY-MM-DD)'),
+        timezone: z.string().describe('IANA timezone'),
+        destinations: z.array(z.string()).describe('List of destinations'),
+        summary: z.string().optional().describe('Trip summary'),
+        travelers: z.array(z.string()).optional().describe('List of traveler names'),
+        pinSalt: z.string().describe('PIN salt'),
+        pinHash: z.string().describe('PIN hash'),
+        days: z.array(z.any()).describe('Complete days array'),
+        notes: z.string().optional().describe('Trip notes'),
+        stays: z.array(z.any()).optional().describe('Hotel stays'),
+        transportLegs: z.array(z.any()).optional().describe('Transport legs'),
+        rentalCars: z.array(z.any()).optional().describe('Rental car reservations'),
+        poiReferences: z.array(z.any()).optional().describe('POI references'),
+        map: z.any().optional().describe('Map configuration'),
+        updatedAt: z.string().describe('Last update timestamp (ISO)'),
+        baseCurrency: z.string().optional().describe('Base currency code'),
+      },
+    },
+    async (args) => {
+      const backend = createBackend();
       const result = ItinerarySchema.safeParse(args);
       if (!result.success) {
         return {
@@ -310,22 +229,20 @@ export async function handleTripTool(
         ],
       };
     }
+  );
 
-    case 'delete_trip': {
-      const result = DeleteTripSchema.safeParse(args);
-      if (!result.success) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Validation error: ${JSON.stringify(result.error.issues, null, 2)}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const deleted = await backend.deleteTrip(result.data.id);
+  // delete_trip
+  server.registerTool(
+    'delete_trip',
+    {
+      description: 'Delete a trip by its ID',
+      inputSchema: {
+        id: z.string().regex(/^[a-z0-9]{8}$/).describe('8-character alphanumeric trip ID'),
+      },
+    },
+    async ({ id }) => {
+      const backend = createBackend();
+      const deleted = await backend.deleteTrip(id);
 
       return {
         content: [
@@ -336,13 +253,5 @@ export async function handleTripTool(
         ],
       };
     }
-
-    default:
-      return undefined;
-  }
-}
-
-// Placeholder for register function (not used in current architecture but exported for compatibility)
-export function registerTripTools(): void {
-  // Tools are registered centrally in server.ts
+  );
 }

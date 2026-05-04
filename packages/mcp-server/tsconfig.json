@@ -11,12 +11,6 @@
     "declarationMap": true,
     "composite": true,
     "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@itsaydrian/waymark-shared": ["../shared/src/index.ts"],
-      "@itsaydrian/waymark-shared/types": ["../shared/src/types/index.ts"],
-      "@itsaydrian/waymark-shared/lib": ["../shared/src/lib/index.ts"]
-    },
     "lib": ["ES2022", "DOM"],
     "types": ["@cloudflare/workers-types", "bun"],
     "noEmit": false

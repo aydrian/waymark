@@ -1,119 +1,19 @@
 #!/usr/bin/env node
 /**
- * HTTP/SSE transport for Waymark MCP Server
+ * HTTP transport for Waymark MCP Server
  *
- * This runs an HTTP server that exposes the MCP protocol over SSE.
- * Useful for remote access or integration with other MCP clients.
+ * NOTE: This transport is currently a placeholder. The stdio transport is the
+ * primary transport for Claude Desktop integration.
+ *
+ * For HTTP/SSE support, the transport needs to be updated to use the new
+ * StreamableHTTPServerTransport from the MCP SDK.
  *
  * Usage:
  *   bun src/transports/http.ts
  *
  * The server listens on PORT (default: 3000) and exposes:
- *   GET /sse - SSE endpoint for server-to-client messages
- *   POST /messages - Client-to-server message endpoint
+ *   GET /health - Health check endpoint
  */
-
-import { createServer } from '../server.js';
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
-
-// Simple SSE transport implementation
-class SSETransport {
-  private server: Server;
-  private sessions: Map<string, ReadableStreamDefaultController<Uint8Array>> = new Map();
-
-  constructor(server: Server) {
-    this.server =
-
- server;
-  }
-
-  async handleSSE(request: Request): Promise<Response> {
-    const sessionId = crypto.randomUUID();
-
-    const stream = new ReadableStream({
-      start: (controller) => {
-        this.sessions.set(sessionId, controller);
-
-        // Send endpoint event
-        const endpointEvent = `event: endpoint\ndata: ${encodeURIComponent(`/messages?sessionId=${sessionId}`)}\n\n`;
-        controller.enqueue(new TextEncoder().encode(endpointEvent));
-      },
-      cancel: () => {
-        this.sessions.delete(sessionId);
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
-  }
-
-  async handleMessage(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const sessionId = url.searchParams.get('sessionId');
-
-    if (!sessionId || !this.sessions.has(sessionId)) {
-      return new Response(JSON.stringify({ error: 'Invalid or missing sessionId' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    try {
-      const message = await request.json() as JSONRPCMessage;
-
-      // Handle the message through the MCP server
-      // The server will send responses back through the SSE connection
-      const controller = this.sessions.get(sessionId);
-      if (controller) {
-        // Forward message to server's handler and get response
-        // This is a simplified implementation - the actual SDK may require different handling
-        const response = await this.processMessage(message);
-        if (response) {
-          const sseMessage = `data: ${JSON.stringify(response)}\n\n`;
-          controller.enqueue(new TextEncoder().encode(sseMessage));
-        }
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return new Response(JSON.stringify({ error: message }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  }
-
-  private async processMessage(message: JSONRPCMessage): Promise<JSONRPCMessage | null> {
-    // This is a placeholder - the actual implementation would use the SDK's internal handling
-    // For now, we return a simple acknowledgement
-    if ('method' in message && 'id' in message && message.id !== undefined) {
-      return {
-        jsonrpc: '2.0',
-        id: message.id,
-        result: {},
-      };
-    }
-    return null;
-  }
-
-  sendMessage(sessionId: string, message: JSONRPCMessage): void {
-    const controller = this.sessions.get(sessionId);
-    if (controller) {
-      const sseMessage = `data: ${JSON.stringify(message)}\n\n`;
-      controller.enqueue(new TextEncoder().encode(sseMessage));
-    }
-  }
-}
 
 async function main() {
   // Validate required environment variable
@@ -126,9 +26,6 @@ async function main() {
   }
 
   const port = parseInt(process.env.PORT || '3000', 10);
-
-  const mcpServer = createServer();
-  const sseTransport = new SSETransport(mcpServer);
 
   // Create HTTP server using Bun's serve API
   const server = Bun.serve({
@@ -147,48 +44,36 @@ async function main() {
         return new Response(null, { headers: corsHeaders });
       }
 
-      // SSE endpoint
-      if (url.pathname === '/sse' && request.method === 'GET') {
-        const response = await sseTransport.handleSSE(request);
-        // Add CORS headers
-        const newHeaders = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          newHeaders.set(key, value);
-        });
-        return new Response(response.body, {
-          status: response.status,
-          headers: newHeaders,
-        });
-      }
-
-      // Message endpoint
-      if (url.pathname === '/messages' && request.method === 'POST') {
-        const response = await sseTransport.handleMessage(request);
-        // Add CORS headers
-        const newHeaders = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          newHeaders.set(key, value);
-        });
-        return new Response(response.body, {
-          status: response.status,
-          headers: newHeaders,
-        });
-      }
-
       // Health check
       if (url.pathname === '/health' && request.method === 'GET') {
-        return new Response(JSON.stringify({ status: 'ok' }), {
+        return new Response(JSON.stringify({ status: 'ok', transport: 'http-placeholder' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      // MCP endpoint - returns informative message
+      if (url.pathname === '/mcp' || url.pathname === '/sse' || url.pathname === '/messages') {
+        return new Response(
+          JSON.stringify({
+            error: 'HTTP transport not fully implemented',
+            message: 'Please use the stdio transport for Claude Desktop integration: bun run mcp:dev:stdio',
+          }),
+          {
+            status: 501,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
 
       return new Response('Not Found', { status: 404, headers: corsHeaders });
     },
   });
 
-  console.log(`Waymark MCP Server running on http://localhost:${port}`);
-  console.log(`  SSE endpoint: http://localhost:${port}/sse`);
+  console.log(`Waymark MCP Server (HTTP placeholder) running on http://localhost:${port}`);
   console.log(`  Health check: http://localhost:${port}/health`);
+  console.log('');
+  console.log('NOTE: HTTP transport is not fully implemented.');
+  console.log('      Use the stdio transport for Claude Desktop: bun run mcp:dev:stdio');
 }
 
 main().catch((error) => {
