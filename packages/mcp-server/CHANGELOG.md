@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.1.7] - 2026-05-04
+
+### Changed
+
+- Migrated from deprecated `Server` class to `McpServer` class from `@modelcontextprotocol/sdk/server/mcp.js`
+- Replaced deprecated `server.tool()` with `server.registerTool()` API
+- Removed deprecated `baseUrl` and `paths` from tsconfig.json (using package exports instead)
+- Simplified HTTP transport to placeholder (stdio is the primary transport for Claude Desktop)
+
 ## [0.1.6] - 2026-05-02
 
 ### Fixed
