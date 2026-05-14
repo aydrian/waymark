@@ -1,6 +1,6 @@
 {
   "name": "@itsaydrian/waymark-mcp-server",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Model Context Protocol server for Waymark travel itinerary management",
   "private": false,
   "type": "module",
@@ -46,7 +46,7 @@
   },
   "homepage": "https://github.com/aydrian/waymark/tree/main/packages/mcp-server#readme",
   "dependencies": {
-    "@itsaydrian/waymark-shared": "^0.0.1",
+    "@itsaydrian/waymark-shared": "^0.0.2",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "zod": "^4.3.6"
   },

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.8] - 2026-05-14
+
+### Added
+
+- `create_trip` and `update_trip` tools now expose `status`, `statusReason`, and `statusChangedAt` fields
+- Trip status supports Fora-style pipeline: `planning`, `booking`, `travel_ready`, `traveling`, `post_trip`, `completed`, `closed_lost`
+
+### Changed
+
+- Bumped `@itsaydrian/waymark-shared` dependency to `^0.0.2`
+
 ## [0.1.7] - 2026-05-04
 
 ### Changed

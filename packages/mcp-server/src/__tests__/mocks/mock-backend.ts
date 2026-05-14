@@ -56,6 +56,7 @@ export function createMockBackend(): WaymarkBackend & {
         timezone: t.timezone,
         updatedAt: t.updatedAt,
         travelers: t.travelers || [],
+        status: t.status,
       }));
     },
 
