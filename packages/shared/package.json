@@ -1,6 +1,6 @@
 {
   "name": "@itsaydrian/waymark-shared",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Shared types and utilities for Waymark travel itinerary platform",
   "private": false,
   "type": "module",
