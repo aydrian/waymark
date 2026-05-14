@@ -69,10 +69,40 @@
   --color-trip-live-text: #065f46;
   --color-trip-live-border: #a7f3d0;
 
+  /* Trip Status: Planning (amber) */
+  --color-trip-planning-bg: #fef3c7;
+  --color-trip-planning-text: #92400e;
+  --color-trip-planning-border: #fde68a;
+
+  /* Trip Status: Booking (sky) */
+  --color-trip-booking-bg: #e0f2fe;
+  --color-trip-booking-text: #075985;
+  --color-trip-booking-border: #bae6fd;
+
+  /* Trip Status: Travel Ready (teal) */
+  --color-trip-travel-ready-bg: #ccfbf1;
+  --color-trip-travel-ready-text: #115e59;
+  --color-trip-travel-ready-border: #99f6e4;
+
+  /* Trip Status: Traveling (emerald) */
+  --color-trip-traveling-bg: #d1fae5;
+  --color-trip-traveling-text: #065f46;
+  --color-trip-traveling-border: #a7f3d0;
+
+  /* Trip Status: Post Trip (violet) */
+  --color-trip-post-trip-bg: #ede9fe;
+  --color-trip-post-trip-text: #5b21b6;
+  --color-trip-post-trip-border: #ddd6fe;
+
   /* Trip Status: Completed (stone) */
   --color-trip-completed-bg: #f5f4f0;
   --color-trip-completed-text: #57534e;
   --color-trip-completed-border: #e7e5e4;
+
+  /* Trip Status: Closed-lost (red) */
+  --color-trip-closed-lost-bg: #fee2e2;
+  --color-trip-closed-lost-text: #991b1b;
+  --color-trip-closed-lost-border: #fecaca;
 
   /* Error (red) */
   --color-error-bg: #fee2e2;
@@ -148,10 +178,40 @@ html.dark {
   --color-trip-live-text: #6ee7b7;
   --color-trip-live-border: #065f46;
 
+  /* Trip Status: Planning (amber) */
+  --color-trip-planning-bg: #78350f;
+  --color-trip-planning-text: #fcd34d;
+  --color-trip-planning-border: #92400e;
+
+  /* Trip Status: Booking (sky) */
+  --color-trip-booking-bg: #0c4a6e;
+  --color-trip-booking-text: #7dd3fc;
+  --color-trip-booking-border: #075985;
+
+  /* Trip Status: Travel Ready (teal) */
+  --color-trip-travel-ready-bg: #134e4a;
+  --color-trip-travel-ready-text: #5eead4;
+  --color-trip-travel-ready-border: #115e59;
+
+  /* Trip Status: Traveling (emerald) */
+  --color-trip-traveling-bg: #064e3b;
+  --color-trip-traveling-text: #6ee7b7;
+  --color-trip-traveling-border: #065f46;
+
+  /* Trip Status: Post Trip (violet) */
+  --color-trip-post-trip-bg: #4c1d95;
+  --color-trip-post-trip-text: #c4b5fd;
+  --color-trip-post-trip-border: #5b21b6;
+
   /* Trip Status: Completed */
   --color-trip-completed-bg: #292524;
   --color-trip-completed-text: #a8a29e;
   --color-trip-completed-border: #44403c;
+
+  /* Trip Status: Closed-lost (red) */
+  --color-trip-closed-lost-bg: #7f1d1d;
+  --color-trip-closed-lost-text: #fca5a5;
+  --color-trip-closed-lost-border: #991b1b;
 
   /* Error */
   --color-error-bg: #450a0a;

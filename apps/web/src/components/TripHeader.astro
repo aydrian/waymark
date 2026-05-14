@@ -6,11 +6,36 @@ const { trip } = Astro.props;
 const fmt = (d: string) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {
   month: 'short', day: 'numeric', year: 'numeric',
 });
+
+const statusLabel: Record<string, string> = {
+  planning: 'Planning',
+  booking: 'Booking',
+  travel_ready: 'Travel Ready',
+  traveling: 'Traveling',
+  post_trip: 'Post Trip',
+  completed: 'Completed',
+  closed_lost: 'Closed — Lost',
+};
+
+const statusClass: Record<string, string> = {
+  planning: 'bg-[var(--color-trip-planning-bg)] text-[var(--color-trip-planning-text)] border-[var(--color-trip-planning-border)]',
+  booking: 'bg-[var(--color-trip-booking-bg)] text-[var(--color-trip-booking-text)] border-[var(--color-trip-booking-border)]',
+  travel_ready: 'bg-[var(--color-trip-travel-ready-bg)] text-[var(--color-trip-travel-ready-text)] border-[var(--color-trip-travel-ready-border)]',
+  traveling: 'bg-[var(--color-trip-traveling-bg)] text-[var(--color-trip-traveling-text)] border-[var(--color-trip-traveling-border)]',
+  post_trip: 'bg-[var(--color-trip-post-trip-bg)] text-[var(--color-trip-post-trip-text)] border-[var(--color-trip-post-trip-border)]',
+  completed: 'bg-[var(--color-trip-completed-bg)] text-[var(--color-trip-completed-text)] border-[var(--color-trip-completed-border)]',
+  closed_lost: 'bg-[var(--color-trip-closed-lost-bg)] text-[var(--color-trip-closed-lost-text)] border-[var(--color-trip-closed-lost-border)]',
+};
 ---
 <header class="bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 py-6 sm:px-6">
-  <p class="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
-    {trip.destinations.join(' · ')}
-  </p>
+  <div class="flex items-center gap-2 mb-1">
+    <p class="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
+      {trip.destinations.join(' · ')}
+    </p>
+    <span class={`text-[10px] px-1.5 py-0.5 rounded border ${statusClass[trip.status] ?? ''}`}>
+      {statusLabel[trip.status] ?? trip.status}
+    </span>
+  </div>
   <h1 class="text-2xl font-bold text-[var(--color-text-primary)] sm:text-3xl">{trip.title}</h1>
   <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{fmt(trip.startDate)} – {fmt(trip.endDate)}</p>
   {trip.travelers && trip.travelers.length > 0 && (

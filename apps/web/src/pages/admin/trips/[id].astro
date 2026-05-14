@@ -111,6 +111,28 @@ const complexData = {
           >{trip.summary ?? ''}</textarea>
         </div>
 
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Status</label>
+            <select name="status"
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500">
+              <option value="planning" selected={trip.status === 'planning'}>Planning</option>
+              <option value="booking" selected={trip.status === 'booking'}>Booking</option>
+              <option value="travel_ready" selected={trip.status === 'travel_ready'}>Travel Ready</option>
+              <option value="traveling" selected={trip.status === 'traveling'}>Traveling</option>
+              <option value="post_trip" selected={trip.status === 'post_trip'}>Post Trip</option>
+              <option value="completed" selected={trip.status === 'completed'}>Completed</option>
+              <option value="closed_lost" selected={trip.status === 'closed_lost'}>Closed — Lost</option>
+            </select>
+            <input type="hidden" name="originalStatus" value={trip.status} />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Status Reason (optional)</label>
+            <input name="statusReason" value={trip.statusReason ?? ''} placeholder="e.g., Pregnancy complications"
+              class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
             New PIN (leave blank to keep existing)
@@ -350,6 +372,8 @@ const complexData = {
         destinations: (fd.get('destinations') as string).split(',').map(s => s.trim()).filter(Boolean),
         travelers: fd.get('travelers') ? (fd.get('travelers') as string).split(',').map(s => s.trim()).filter(Boolean) : [],
         summary: fd.get('summary') || undefined,
+        status: fd.get('status'),
+        statusReason: fd.get('statusReason') || undefined,
         pinSalt: fd.get('pinSalt'),
         pinHash: fd.get('pinHash'),
         updatedAt: new Date().toISOString(),

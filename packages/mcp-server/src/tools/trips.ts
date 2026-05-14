@@ -109,6 +109,9 @@ export function registerTripTools(server: McpServer, createBackend: () => Waymar
           zoom: z.number(),
         }).optional().describe('Optional map configuration'),
         baseCurrency: z.string().default('USD').describe('Base currency code (3 letters)'),
+        status: z.enum(['planning', 'booking', 'travel_ready', 'traveling', 'post_trip', 'completed', 'closed_lost']).optional().describe('Trip status'),
+        statusReason: z.string().optional().describe('Optional reason for status (e.g., cancellation reason)'),
+        statusChangedAt: z.string().optional().describe('ISO timestamp when status was last changed'),
       },
     },
     async (args) => {
@@ -187,6 +190,9 @@ export function registerTripTools(server: McpServer, createBackend: () => Waymar
         map: z.any().optional().describe('Map configuration'),
         updatedAt: z.string().describe('Last update timestamp (ISO)'),
         baseCurrency: z.string().optional().describe('Base currency code'),
+        status: z.enum(['planning', 'booking', 'travel_ready', 'traveling', 'post_trip', 'completed', 'closed_lost']).optional().describe('Trip status'),
+        statusReason: z.string().optional().describe('Optional reason for status'),
+        statusChangedAt: z.string().optional().describe('ISO timestamp when status was last changed'),
       },
     },
     async (args) => {

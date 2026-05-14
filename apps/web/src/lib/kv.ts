@@ -44,6 +44,7 @@ export async function listTrips(kv: KVNamespace): Promise<TripSummary[]> {
       destinations: t.destinations,
       travelers: t.travelers ?? [],
       updatedAt: t.updatedAt,
+      status: t.status,
     }));
 }
 

@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { requireAdminAccess } from '../../../../lib/admin-auth.js';
-import { putTrip, hashPin, generateSalt } from '@itsaydrian/waymark-shared/lib';
+import { putTrip, getTrip, hashPin, generateSalt } from '@itsaydrian/waymark-shared/lib';
 import { ItinerarySchema } from '@itsaydrian/waymark-shared/types';
 
 export const POST: APIRoute = async ({ request }) => {
   const authError = await requireAdminAccess(request, env.ADMIN_API_TOKEN, env.COOKIE_SIGNING_SECRET);
   if (authError) return authError;
 
-  let body: unknown;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
@@ -19,20 +19,21 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // If a plain `pin` string is provided, hash it server-side and inject pinSalt/pinHash
-  if (
-    body !== null &&
-    typeof body === 'object' &&
-    'pin' in body &&
-    typeof (body as Record<string, unknown>).pin === 'string'
-  ) {
-    const pin = (body as Record<string, unknown>).pin as string;
-    delete (body as Record<string, unknown>).pin;
+  if (typeof body.pin === 'string') {
+    const pin = body.pin;
+    delete body.pin;
     if (pin.length > 0) {
       const salt = generateSalt();
       const hash = await hashPin(pin, salt);
-      (body as Record<string, unknown>).pinSalt = salt;
-      (body as Record<string, unknown>).pinHash = hash;
+      body.pinSalt = salt;
+      body.pinHash = hash;
     }
+  }
+
+  // Auto-set statusChangedAt when status changes on existing trips
+  const existing = await getTrip(env.TRIPS, body.id as string);
+  if (existing && typeof body.status === 'string' && body.status !== existing.status) {
+    body.statusChangedAt = new Date().toISOString();
   }
 
   const result = ItinerarySchema.safeParse(body);

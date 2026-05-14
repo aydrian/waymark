@@ -8,6 +8,10 @@ export const ItemStatusSchema = z.enum([
   'booked', 'quoted', 'pending', 'canceled',
 ]);
 
+export const TripStatusSchema = z.enum([
+  'planning', 'booking', 'travel_ready', 'traveling', 'post_trip', 'completed', 'closed_lost',
+]);
+
 export const HotelStaySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -209,6 +213,9 @@ export const ItinerarySchema = z.object({
   pois: z.array(PlaceOfInterestSchema).optional().default([]),
   // New field - references to Global POIs
   poiReferences: z.array(TripPOIReferenceSchema).optional().default([]),
+  status: TripStatusSchema.default('planning'),
+  statusReason: z.string().optional(),
+  statusChangedAt: z.string().optional(),
   pinSalt: z.string(),
   pinHash: z.string(),
   updatedAt: z.string(), // ISO datetime
@@ -219,6 +226,7 @@ export const ItinerarySchema = z.object({
 // TypeScript types derived from schemas
 export type ItemType = z.infer<typeof ItemTypeSchema>;
 export type ItemStatus = z.infer<typeof ItemStatusSchema>;
+export type TripStatus = z.infer<typeof TripStatusSchema>;
 export type HotelStay = z.infer<typeof HotelStaySchema>;
 export type TransportLeg = z.infer<typeof TransportLegSchema>;
 export type RentalCarReservation = z.infer<typeof RentalCarReservationSchema>;
@@ -240,4 +248,5 @@ export type TripSummary = {
   destinations: string[];
   travelers: string[];
   updatedAt: string;
+  status: TripStatus;
 };

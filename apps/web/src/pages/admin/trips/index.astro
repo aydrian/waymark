@@ -9,21 +9,58 @@ const redirect = await requireAdminSession(Astro.request, env.COOKIE_SIGNING_SEC
 if (redirect) return redirect;
 
 const trips = await listTrips(env.TRIPS);
-// Sort most-recently-updated first
-trips.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-function getStatus(startDate: string, endDate: string): 'upcoming' | 'live' | 'completed' {
+function getDateStatus(startDate: string, endDate: string): 'upcoming' | 'live' | 'completed' {
   const today = new Date().toISOString().slice(0, 10);
   if (today < startDate) return 'upcoming';
   if (today > endDate) return 'completed';
   return 'live';
 }
 
-const statusClass = {
+const statusRank: Record<string, number> = {
+  planning: 0,
+  booking: 1,
+  travel_ready: 2,
+  traveling: 3,
+  post_trip: 4,
+  completed: 5,
+  closed_lost: 6,
+};
+
+const showAll = Astro.url.searchParams.get('showAll') === '1';
+
+const activeStatuses = new Set(['planning', 'booking', 'travel_ready', 'traveling', 'post_trip']);
+
+const visibleTrips = showAll
+  ? trips
+  : trips.filter(t => activeStatuses.has(t.status));
+
+// Sort: active pipeline first, then completed, then closed_lost
+visibleTrips.sort((a, b) => {
+  const rankDiff = statusRank[a.status] - statusRank[b.status];
+  if (rankDiff !== 0) return rankDiff;
+  return b.updatedAt.localeCompare(a.updatedAt);
+});
+
+const dateStatusClass = {
   upcoming: 'bg-[var(--color-trip-upcoming-bg)] text-[var(--color-trip-upcoming-text)] border border-[var(--color-trip-upcoming-border)]',
   live: 'bg-[var(--color-trip-live-bg)] text-[var(--color-trip-live-text)] border border-[var(--color-trip-live-border)]',
   completed: 'bg-[var(--color-trip-completed-bg)] text-[var(--color-trip-completed-text)] border border-[var(--color-trip-completed-border)]',
 } as const;
+
+const statusClass: Record<string, string> = {
+  planning: 'bg-[var(--color-trip-planning-bg)] text-[var(--color-trip-planning-text)] border border-[var(--color-trip-planning-border)]',
+  booking: 'bg-[var(--color-trip-booking-bg)] text-[var(--color-trip-booking-text)] border border-[var(--color-trip-booking-border)]',
+  travel_ready: 'bg-[var(--color-trip-travel-ready-bg)] text-[var(--color-trip-travel-ready-text)] border border-[var(--color-trip-travel-ready-border)]',
+  traveling: 'bg-[var(--color-trip-traveling-bg)] text-[var(--color-trip-traveling-text)] border border-[var(--color-trip-traveling-border)]',
+  post_trip: 'bg-[var(--color-trip-post-trip-bg)] text-[var(--color-trip-post-trip-text)] border border-[var(--color-trip-post-trip-border)]',
+  completed: 'bg-[var(--color-trip-completed-bg)] text-[var(--color-trip-completed-text)] border border-[var(--color-trip-completed-border)]',
+  closed_lost: 'bg-[var(--color-trip-closed-lost-bg)] text-[var(--color-trip-closed-lost-text)] border border-[var(--color-trip-closed-lost-border)]',
+};
+
+const isInactive = (status: string) => status === 'completed' || status === 'closed_lost';
+
+const hiddenCount = trips.length - visibleTrips.length;
 ---
 <TripLayout title="Admin — Trips">
   <AdminNavbar currentPage="trips" />
@@ -45,20 +82,38 @@ const statusClass = {
       </p>
     ) : (
       <div class="flex flex-col gap-2">
-        {trips.map((trip) => {
-          const status = getStatus(trip.startDate, trip.endDate);
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-sm text-[var(--color-text-secondary)]">
+            Showing {visibleTrips.length} of {trips.length} trips
+          </p>
+          {hiddenCount > 0 && (
+            <a
+              href={showAll ? '/admin/trips' : '/admin/trips?showAll=1'}
+              class="text-sm text-blue-400 hover:underline"
+            >
+              {showAll ? 'Hide completed/closed trips' : `Show ${hiddenCount} completed/closed trip${hiddenCount === 1 ? '' : 's'}`}
+            </a>
+          )}
+        </div>
+
+        {visibleTrips.map((trip) => {
+          const dateStatus = getDateStatus(trip.startDate, trip.endDate);
+          const inactive = isInactive(trip.status);
           return (
-            <div class="flex items-center justify-between p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div class={`flex items-center justify-between p-4 rounded-lg border ${inactive ? 'border-[var(--color-border-subtle)] bg-[var(--color-bg-subtle)] opacity-75' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
               <div class="min-w-0 flex-1">
-                <div class="font-medium truncate">{trip.title}</div>
+                <div class={`font-medium truncate ${inactive ? 'line-through text-[var(--color-text-muted)]' : ''}`}>{trip.title}</div>
                 <div class="text-sm text-[var(--color-text-secondary)] mt-0.5">
                   {trip.startDate} – {trip.endDate}
                   <span class="font-mono text-xs ml-2 opacity-50">{trip.id}</span>
                 </div>
               </div>
               <div class="flex items-center gap-3 ml-4 shrink-0">
-                <span class={`text-xs px-2 py-0.5 rounded-full ${statusClass[status]}`}>
-                  {status}
+                <span class={`text-xs px-2 py-0.5 rounded-full ${statusClass[trip.status] ?? ''}`}>
+                  {trip.status.replace('_', ' ')}
+                </span>
+                <span class={`text-xs px-2 py-0.5 rounded-full ${dateStatusClass[dateStatus]}`}>
+                  {dateStatus}
                 </span>
                 <a
                   href={`/admin/trips/${trip.id}`}

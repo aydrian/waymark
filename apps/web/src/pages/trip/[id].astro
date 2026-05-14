@@ -390,6 +390,19 @@ const localDateDisplay = isLive
     <PinGateForm tripId={id} />
   ) : (
     <main>
+      {trip.status === 'closed_lost' && (
+        <div class="bg-[var(--color-trip-closed-lost-bg)] text-[var(--color-trip-closed-lost-text)] border-b border-[var(--color-trip-closed-lost-border)] px-4 py-3 sm:px-6">
+          <p class="text-sm font-medium">This trip has been canceled.</p>
+          {trip.statusReason && (
+            <p class="text-sm mt-0.5 opacity-80">Reason: {trip.statusReason}</p>
+          )}
+        </div>
+      )}
+      {trip.status === 'completed' && (
+        <div class="bg-[var(--color-trip-completed-bg)] text-[var(--color-trip-completed-text)] border-b border-[var(--color-trip-completed-border)] px-4 py-3 sm:px-6">
+          <p class="text-sm font-medium">This trip is completed and archived for reference.</p>
+        </div>
+      )}
       {isLive && currentDayNumber !== undefined && (
         <LiveTripBanner
           currentDayNumber={currentDayNumber}
