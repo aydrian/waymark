@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "bun run --filter @waymark/web build",
+    "deploy": "bun run --filter @waymark/web deploy",
     "web:dev": "bun run --filter @waymark/web dev",
     "web:build": "bun run --filter @waymark/web build",
     "web:preview": "bun run --filter @waymark/web preview",
