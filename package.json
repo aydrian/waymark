@@ -11,6 +11,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "bun run --filter @waymark/web build",
     "web:dev": "bun run --filter @waymark/web dev",
     "web:build": "bun run --filter @waymark/web build",
     "web:preview": "bun run --filter @waymark/web preview",
