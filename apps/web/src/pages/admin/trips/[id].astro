@@ -818,9 +818,42 @@ const complexData = {
         return;
       }
 
+      function makeDayDropZone(insertIdx: number): HTMLDivElement {
+        const zone = document.createElement('div');
+        zone.dataset.dayDrop = String(insertIdx);
+        zone.className = 'transition-all h-[6px]';
+        zone.addEventListener('dragover', (e) => {
+          if (!e.dataTransfer!.types.includes('application/x-day')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-8 bg-blue-500/10 border-t-2 border-blue-500';
+        });
+        zone.addEventListener('dragleave', () => {
+          zone.className = 'transition-all h-[6px]';
+        });
+        zone.addEventListener('drop', (e) => {
+          if (!e.dataTransfer!.types.includes('application/x-day')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-[6px]';
+          const fromIdx = parseInt(e.dataTransfer!.getData('application/x-day'), 10);
+          if (isNaN(fromIdx)) return;
+          const days = itineraryState.days;
+          const [moved] = days.splice(fromIdx, 1);
+          const insertAt = fromIdx < insertIdx ? insertIdx - 1 : insertIdx;
+          days.splice(insertAt, 0, moved);
+          days.forEach((d, i) => { d.dayNumber = i + 1; });
+          renderItinerary();
+        });
+        return zone;
+      }
+
+      // Top drop zone (insert before first day)
+      container.appendChild(makeDayDropZone(0));
+
       itineraryState.days.forEach((day, dayIdx) => {
         const card = document.createElement('div');
-        card.className = 'mb-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] overflow-hidden';
+        card.className = 'border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] overflow-hidden';
         card.draggable = true;
         card.addEventListener('dragstart', (e) => {
           e.dataTransfer!.setData('application/x-day', String(dayIdx));
@@ -829,7 +862,6 @@ const complexData = {
         });
         card.addEventListener('dragend', () => {
           card.classList.remove('opacity-50');
-          header.classList.remove('border-t-blue-500');
         });
 
         // Day header
@@ -892,29 +924,6 @@ const complexData = {
         header.appendChild(reorderDown);
         header.appendChild(delDayBtn);
         card.appendChild(header);
-
-        header.addEventListener('dragover', (e) => {
-          if (!e.dataTransfer!.types.includes('application/x-day')) return;
-          e.preventDefault();
-          e.stopPropagation();
-          header.classList.add('border-t-blue-500');
-        });
-        header.addEventListener('dragleave', () => {
-          header.classList.remove('border-t-blue-500');
-        });
-        header.addEventListener('drop', (e) => {
-          if (!e.dataTransfer!.types.includes('application/x-day')) return;
-          e.preventDefault();
-          e.stopPropagation();
-          header.classList.remove('border-t-blue-500');
-          const fromIdx = parseInt(e.dataTransfer!.getData('application/x-day'), 10);
-          if (fromIdx === dayIdx || isNaN(fromIdx)) return;
-          const days = itineraryState.days;
-          const [moved] = days.splice(fromIdx, 1);
-          const insertAt = fromIdx < dayIdx ? dayIdx - 1 : dayIdx;
-          days.splice(insertAt, 0, moved);
-          renderItinerary();
-        });
 
         if (!manuallyReordered[dayIdx]) {
           const withTime = day.items.filter((i: any) => i.startTime);
@@ -1032,6 +1041,7 @@ const complexData = {
 
         card.appendChild(itemsSection);
         container.appendChild(card);
+        container.appendChild(makeDayDropZone(dayIdx + 1));
       });
     }
 
