@@ -848,6 +848,36 @@ const complexData = {
         return zone;
       }
 
+      function makeItemDropZone(dayIdx: number, insertIdx: number): HTMLDivElement {
+        const zone = document.createElement('div');
+        zone.dataset.itemDrop = `${dayIdx}:${insertIdx}`;
+        zone.className = 'transition-all h-[6px]';
+        zone.addEventListener('dragover', (e) => {
+          if (!e.dataTransfer!.types.includes('text/plain')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-8 bg-blue-500/10 border-t-2 border-blue-500';
+        });
+        zone.addEventListener('dragleave', () => {
+          zone.className = 'transition-all h-[6px]';
+        });
+        zone.addEventListener('drop', (e) => {
+          if (!e.dataTransfer!.types.includes('text/plain')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-[6px]';
+          const fromIdx = parseInt(e.dataTransfer!.getData('text/plain'), 10);
+          if (isNaN(fromIdx)) return;
+          const items = itineraryState.days[dayIdx].items;
+          const [moved] = items.splice(fromIdx, 1);
+          const insertAt = fromIdx < insertIdx ? insertIdx - 1 : insertIdx;
+          items.splice(insertAt, 0, moved);
+          manuallyReordered[dayIdx] = true;
+          renderItinerary();
+        });
+        return zone;
+      }
+
       // Top drop zone (insert before first day)
       container.appendChild(makeDayDropZone(0));
 
@@ -937,6 +967,7 @@ const complexData = {
         itemsSection.className = 'p-3 flex flex-col gap-2';
 
         if (day.items && day.items.length > 0) {
+          itemsSection.appendChild(makeItemDropZone(dayIdx, 0));
           day.items.forEach((item: any, itemIdx: number) => {
             const row = document.createElement('div');
             row.className = 'flex items-center gap-2 px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-subtle)] hover:border-blue-500/50 transition-colors';
@@ -946,34 +977,8 @@ const complexData = {
               e.dataTransfer!.effectAllowed = 'move';
               row.classList.add('opacity-50');
             });
-            row.addEventListener('dragend', (e) => {
-              if (!e.dataTransfer!.types.includes('text/plain')) return;
+            row.addEventListener('dragend', () => {
               row.classList.remove('opacity-50');
-              row.classList.remove('border-t-blue-500');
-            });
-            row.addEventListener('dragover', (e) => {
-              if (!e.dataTransfer!.types.includes('text/plain')) return;
-              e.preventDefault();
-              e.stopPropagation();
-              row.classList.add('border-t-blue-500');
-            });
-            row.addEventListener('dragleave', (e) => {
-              if (!e.dataTransfer!.types.includes('text/plain')) return;
-              row.classList.remove('border-t-blue-500');
-            });
-            row.addEventListener('drop', (e) => {
-              if (!e.dataTransfer!.types.includes('text/plain')) return;
-              e.preventDefault();
-              e.stopPropagation();
-              row.classList.remove('border-t-blue-500');
-              const fromIdx = parseInt(e.dataTransfer!.getData('text/plain'), 10);
-              if (fromIdx === itemIdx || isNaN(fromIdx)) return;
-              const items = itineraryState.days[dayIdx].items;
-              const [moved] = items.splice(fromIdx, 1);
-              const insertAt = fromIdx < itemIdx ? itemIdx - 1 : itemIdx;
-              items.splice(insertAt, 0, moved);
-              manuallyReordered[dayIdx] = true;
-              renderItinerary();
             });
 
             const emoji = document.createElement('span');
@@ -1023,6 +1028,7 @@ const complexData = {
             row.appendChild(itemDown);
             row.appendChild(delItemBtn);
             itemsSection.appendChild(row);
+            itemsSection.appendChild(makeItemDropZone(dayIdx, itemIdx + 1));
           });
         } else {
           const empty = document.createElement('p');
