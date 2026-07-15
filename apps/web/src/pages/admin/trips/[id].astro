@@ -809,6 +809,16 @@ const complexData = {
       itineraryState.days.forEach((day, dayIdx) => {
         const card = document.createElement('div');
         card.className = 'mb-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] overflow-hidden';
+        card.draggable = true;
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer!.setData('application/x-day', String(dayIdx));
+          e.dataTransfer!.effectAllowed = 'move';
+          card.classList.add('opacity-50');
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('opacity-50');
+          header.classList.remove('border-t-blue-500');
+        });
 
         // Day header
         const header = document.createElement('div');
@@ -870,6 +880,29 @@ const complexData = {
         header.appendChild(reorderDown);
         header.appendChild(delDayBtn);
         card.appendChild(header);
+
+        header.addEventListener('dragover', (e) => {
+          if (!e.dataTransfer!.types.includes('application/x-day')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          header.classList.add('border-t-blue-500');
+        });
+        header.addEventListener('dragleave', () => {
+          header.classList.remove('border-t-blue-500');
+        });
+        header.addEventListener('drop', (e) => {
+          if (!e.dataTransfer!.types.includes('application/x-day')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          header.classList.remove('border-t-blue-500');
+          const fromIdx = parseInt(e.dataTransfer!.getData('application/x-day'), 10);
+          if (fromIdx === dayIdx || isNaN(fromIdx)) return;
+          const days = itineraryState.days;
+          const [moved] = days.splice(fromIdx, 1);
+          const insertAt = fromIdx < dayIdx ? dayIdx - 1 : dayIdx;
+          days.splice(insertAt, 0, moved);
+          renderItinerary();
+        });
 
         if (!manuallyReordered[dayIdx]) {
           const withTime = day.items.filter((i: any) => i.startTime);
