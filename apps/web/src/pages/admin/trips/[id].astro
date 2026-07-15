@@ -348,6 +348,11 @@ const complexData = {
         btn.classList.toggle('text-[var(--color-text-secondary)]', !isActive);
         panel.classList.toggle('hidden', !isActive);
       });
+
+      const url = new URL(window.location.href);
+      if (which === 'info') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', which);
+      history.replaceState(null, '', url.toString());
     }
 
     tabInfo.addEventListener('click', () => activateTab('info'));
@@ -357,6 +362,13 @@ const complexData = {
     tabItinerary.addEventListener('click', () => activateTab('itinerary'));
     tabPois.addEventListener('click', () => activateTab('pois'));
     tabRaw.addEventListener('click', () => activateTab('raw'));
+
+    // Read ?tab= from URL on load
+    const tabParam = new URL(window.location.href).searchParams.get('tab');
+    const validTabs = ['info', 'hotels', 'transport', 'rental', 'itinerary', 'pois', 'raw'];
+    if (tabParam && validTabs.includes(tabParam)) {
+      activateTab(tabParam);
+    }
 
     // --- CodeMirror editors ---
     const scrollTheme = EditorView.theme({ "&": { height: "100%" }, ".cm-scroller": { overflow: "auto" } });
