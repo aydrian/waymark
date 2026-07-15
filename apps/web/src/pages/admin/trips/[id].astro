@@ -934,6 +934,157 @@ const complexData = {
     // Initialize itinerary editor
     renderItinerary();
 
+    // --- Hotels Tab ---
+    function openHotelModal(idx: number | null) {
+      const existing = idx !== null ? logisticsState.stays[idx] : null;
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-8 px-4 overflow-y-auto';
+
+      const modal = document.createElement('div');
+      modal.className = 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 w-full max-w-lg mb-8';
+
+      const fields = [
+        { key: 'title', label: 'Title', kind: 'text', req: true, def: '' },
+        { key: 'status', label: 'Status', kind: 'select', options: ['booked','quoted','pending','canceled'], def: 'pending' },
+        { key: 'checkinDate', label: 'Check-in Date', kind: 'date', req: true, def: '' },
+        { key: 'checkinTime', label: 'Check-in Time', kind: 'time', def: '' },
+        { key: 'checkoutDate', label: 'Check-out Date', kind: 'date', req: true, def: '' },
+        { key: 'checkoutTime', label: 'Check-out Time', kind: 'time', def: '' },
+        { key: 'location', label: 'Location', kind: 'text', def: '' },
+        { key: 'address', label: 'Address', kind: 'text', def: '' },
+        { key: 'lat', label: 'Latitude', kind: 'number', def: '' },
+        { key: 'lng', label: 'Longitude', kind: 'number', def: '' },
+        { key: 'googleMapsUrl', label: 'Google Maps URL', kind: 'url', def: '' },
+        { key: 'vendor', label: 'Vendor', kind: 'text', def: '' },
+        { key: 'confirmationNumber', label: 'Confirmation #', kind: 'text', def: '' },
+        { key: 'cost', label: 'Cost', kind: 'number', def: '' },
+        { key: 'costCurrency', label: 'Currency', kind: 'select', options: ['USD','EUR','JPY','GBP','CAD','AUD'], def: 'USD' },
+        { key: 'notes', label: 'Notes', kind: 'textarea', def: '' },
+      ] as const;
+
+      modal.innerHTML = `
+        <h3 class="text-sm font-semibold mb-4">${existing ? 'Edit Hotel Stay' : 'Add Hotel Stay'}</h3>
+        <div class="flex flex-col gap-3">
+          ${(fields as any[]).map(f => {
+            const val = existing ? ((existing as any)[f.key] ?? f.def) : f.def;
+            if (f.kind === 'select') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <select name="${f.key}" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]">
+                  ${(f as any).options.map((o: string) => `<option value="${o}"${val === o ? ' selected' : ''}>${o}</option>`).join('')}
+                </select>
+              </div>`;
+            }
+            if (f.kind === 'textarea') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <textarea name="${f.key}" rows="3" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none">${val}</textarea>
+              </div>`;
+            }
+            return `<div>
+              <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+              <input name="${f.key}" type="${f.kind}" value="${val}" ${(f as any).req ? 'required' : ''} class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button type="button" id="hotel-modal-save" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]">Save</button>
+          <button type="button" id="hotel-modal-cancel" class="px-4 py-2 border border-[var(--color-border)] text-sm rounded-lg min-h-[44px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Cancel</button>
+        </div>
+      `;
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
+      modal.querySelector('#hotel-modal-cancel')!.addEventListener('click', () => document.body.removeChild(overlay));
+
+      modal.querySelector('#hotel-modal-save')!.addEventListener('click', () => {
+        const titleInput = modal.querySelector<HTMLInputElement>('[name="title"]')!;
+        if (!titleInput.value.trim()) { titleInput.focus(); return; }
+        const checkinInput = modal.querySelector<HTMLInputElement>('[name="checkinDate"]')!;
+        if (!checkinInput.value) { checkinInput.focus(); return; }
+        const checkoutInput = modal.querySelector<HTMLInputElement>('[name="checkoutDate"]')!;
+        if (!checkoutInput.value) { checkoutInput.focus(); return; }
+
+        const stay: any = { id: (existing as any)?.id ?? generateId() };
+        (fields as any[]).forEach(f => {
+          const el = modal.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${f.key}"]`)!;
+          const v = el.value;
+          if (f.kind === 'number') {
+            if (v !== '') stay[f.key] = parseFloat(v);
+          } else {
+            if (v !== '') stay[f.key] = v;
+          }
+        });
+
+        if (idx !== null) {
+          logisticsState.stays[idx] = stay;
+        } else {
+          logisticsState.stays.push(stay);
+        }
+        document.body.removeChild(overlay);
+        renderHotels();
+      });
+    }
+
+    function renderHotels() {
+      const container = panelHotels;
+      container.innerHTML = '';
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'mb-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]';
+      addBtn.textContent = '+ Add Hotel';
+      addBtn.addEventListener('click', () => openHotelModal(null));
+      container.appendChild(addBtn);
+
+      if (logisticsState.stays.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'text-sm text-[var(--color-text-muted)]';
+        empty.textContent = 'No hotel stays yet.';
+        container.appendChild(empty);
+        return;
+      }
+
+      logisticsState.stays.forEach((stay: any, stayIdx: number) => {
+        const card = document.createElement('div');
+        card.className = 'border border-[var(--color-border)] rounded-lg p-4 mb-3 bg-[var(--color-surface)]';
+
+        const statusClass = ITEM_STATUS_COLOR[stay.status] ?? 'text-[var(--color-text-muted)] bg-[var(--color-bg-subtle)]';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-medium">${stay.title}</span>
+              ${stay.status ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${statusClass}">${stay.status}</span>` : ''}
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button type="button" class="hotel-edit text-xs text-blue-400 hover:text-blue-300 min-h-[44px] px-1">Edit</button>
+              <button type="button" class="hotel-remove text-xs text-red-400/60 hover:text-red-400 min-h-[44px] px-1">Remove</button>
+            </div>
+          </div>
+          ${stay.checkinDate && stay.checkoutDate ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">${stay.checkinDate}${stay.checkinTime ? ' ' + stay.checkinTime : ''} → ${stay.checkoutDate}${stay.checkoutTime ? ' ' + stay.checkoutTime : ''}</p>` : ''}
+          ${stay.location ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">📍 ${stay.location}</p>` : ''}
+          ${stay.vendor ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">🏢 ${stay.vendor}</p>` : ''}
+          ${stay.confirmationNumber ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">Conf: ${stay.confirmationNumber}</p>` : ''}
+          ${stay.cost != null ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">💰 ${stay.cost} ${stay.costCurrency ?? 'USD'}</p>` : ''}
+          ${stay.notes ? `<p class="text-xs text-[var(--color-text-muted)] mt-2 italic">${stay.notes}</p>` : ''}
+        `;
+
+        card.querySelector('.hotel-edit')!.addEventListener('click', () => openHotelModal(stayIdx));
+        card.querySelector('.hotel-remove')!.addEventListener('click', () => {
+          if (!confirm('Remove this hotel stay?')) return;
+          logisticsState.stays.splice(stayIdx, 1);
+          renderHotels();
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    renderHotels();
+
     // --- Delete ---
     const deleteBtn = document.getElementById('delete-btn')!;
     deleteBtn.addEventListener('click', async () => {
