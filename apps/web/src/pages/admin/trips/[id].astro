@@ -925,19 +925,23 @@ const complexData = {
               e.dataTransfer!.effectAllowed = 'move';
               row.classList.add('opacity-50');
             });
-            row.addEventListener('dragend', () => {
+            row.addEventListener('dragend', (e) => {
+              if (!e.dataTransfer!.types.includes('text/plain')) return;
               row.classList.remove('opacity-50');
               row.classList.remove('border-t-blue-500');
             });
             row.addEventListener('dragover', (e) => {
+              if (!e.dataTransfer!.types.includes('text/plain')) return;
               e.preventDefault();
               e.stopPropagation();
               row.classList.add('border-t-blue-500');
             });
-            row.addEventListener('dragleave', () => {
+            row.addEventListener('dragleave', (e) => {
+              if (!e.dataTransfer!.types.includes('text/plain')) return;
               row.classList.remove('border-t-blue-500');
             });
             row.addEventListener('drop', (e) => {
+              if (!e.dataTransfer!.types.includes('text/plain')) return;
               e.preventDefault();
               e.stopPropagation();
               row.classList.remove('border-t-blue-500');
