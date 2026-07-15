@@ -52,44 +52,44 @@ const emptyComplexData = {
       <div>
         <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Title</label>
         <input name="title" required placeholder="Paris Spring 2026"
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
       </div>
 
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Start Date</label>
           <input name="startDate" type="date" value={today} required
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
         </div>
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">End Date</label>
           <input name="endDate" type="date" value={today} required
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
         </div>
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Timezone</label>
           <input name="timezone" required placeholder="America/New_York"
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Destinations (comma-separated)</label>
           <input name="destinations" required placeholder="Paris, Lyon"
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
         </div>
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Travelers (optional)</label>
           <input name="travelers" placeholder="Alice, Bob"
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
         </div>
       </div>
 
       <div>
         <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Summary (optional)</label>
         <textarea name="summary" rows="2" placeholder="A short trip description…"
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"></textarea>
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none min-h-[44px]"></textarea>
       </div>
 
       <div>
@@ -97,19 +97,22 @@ const emptyComplexData = {
           PIN <span class="text-red-400">*</span> (required — controls trip access)
         </label>
         <input name="pin" type="password" required placeholder="Set an access PIN"
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
       </div>
 
       <div>
         <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
           Days / Stays / Transport / POIs / Map (JSON)
         </label>
-        <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:200px"></div>
+        <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
+          📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
+        </div>
+        <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:200px; min-height:40dvh"></div>
       </div>
 
       <div class="pt-2">
         <button type="submit"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]">
           Create trip
         </button>
       </div>

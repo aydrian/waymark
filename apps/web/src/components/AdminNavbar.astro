@@ -13,7 +13,7 @@ const { currentPage = 'dashboard' } = Astro.props;
         <a
           href="/admin/trips"
           class:list={[
-            'px-3 py-1.5 rounded-lg text-sm transition-colors',
+            'px-3 py-1.5 rounded-lg text-sm transition-colors min-h-[44px] inline-flex items-center',
             currentPage === 'trips' || currentPage === 'edit'
               ? 'bg-blue-500/10 text-blue-400'
               : 'hover:bg-[var(--color-bg-subtle)]'
@@ -24,7 +24,7 @@ const { currentPage = 'dashboard' } = Astro.props;
         <a
           href="/admin/pois"
           class:list={[
-            'px-3 py-1.5 rounded-lg text-sm transition-colors',
+            'px-3 py-1.5 rounded-lg text-sm transition-colors min-h-[44px] inline-flex items-center',
             currentPage === 'pois'
               ? 'bg-blue-500/10 text-blue-400'
               : 'hover:bg-[var(--color-bg-subtle)]'
@@ -37,7 +37,7 @@ const { currentPage = 'dashboard' } = Astro.props;
     <form method="POST" action="/api/admin/auth/logout">
       <button
         type="submit"
-        class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+        class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors min-h-[44px] inline-flex items-center"
       >
         Log out
       </button>
@@ -49,7 +49,7 @@ const { currentPage = 'dashboard' } = Astro.props;
     <a
       href="/admin/trips"
       class:list={[
-        'flex-1 text-center px-3 py-2 rounded-lg text-sm transition-colors',
+        'flex-1 text-center px-3 py-2 rounded-lg text-sm transition-colors min-h-[44px] inline-flex items-center justify-center',
         currentPage === 'trips' || currentPage === 'edit'
           ? 'bg-blue-500/10 text-blue-400'
           : 'bg-[var(--color-bg-subtle)]'
@@ -60,7 +60,7 @@ const { currentPage = 'dashboard' } = Astro.props;
     <a
       href="/admin/pois"
       class:list={[
-        'flex-1 text-center px-3 py-2 rounded-lg text-sm transition-colors',
+        'flex-1 text-center px-3 py-2 rounded-lg text-sm transition-colors min-h-[44px] inline-flex items-center justify-center',
         currentPage === 'pois'
           ? 'bg-blue-500/10 text-blue-400'
           : 'bg-[var(--color-bg-subtle)]'

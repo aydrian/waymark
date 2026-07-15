@@ -54,9 +54,9 @@ const complexData = {
 
     <!-- Tabs -->
     <div class="flex border-b border-[var(--color-border)] mb-6">
-      <button id="tab-info" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-400">Info</button>
-      <button id="tab-pois" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)]">POIs ({allPOIs.length})</button>
-      <button id="tab-raw" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)]">Raw JSON</button>
+      <button id="tab-info" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-400 min-h-[44px]">Info</button>
+      <button id="tab-pois" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">POIs ({allPOIs.length})</button>
+      <button id="tab-raw" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Raw JSON</button>
     </div>
 
     <!-- Info Tab -->
@@ -73,7 +73,7 @@ const complexData = {
             class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Start Date</label>
             <input name="startDate" type="date" value={trip.startDate} required
@@ -91,7 +91,7 @@ const complexData = {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Destinations (comma-separated)</label>
             <input name="destinations" value={trip.destinations.join(', ')} required
@@ -111,7 +111,7 @@ const complexData = {
           >{trip.summary ?? ''}</textarea>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Status</label>
             <select name="status"
@@ -145,16 +145,19 @@ const complexData = {
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
             Days / Stays / Transport / Rental Cars / POIs / Map (JSON)
           </label>
-          <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:260px"></div>
+          <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
+            📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
+          </div>
+          <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:260px; min-height:40dvh"></div>
         </div>
 
         <div class="flex items-center justify-between pt-2">
           <button type="submit"
-            class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+            class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]">
             Save changes
           </button>
           <button type="button" id="delete-btn"
-            class="text-sm text-red-400 hover:text-red-300 transition-colors">
+            class="text-sm text-red-400 hover:text-red-300 transition-colors min-h-[44px]">
             Delete trip…
           </button>
         </div>
@@ -197,7 +200,7 @@ const complexData = {
                 <div class="flex flex-col gap-2">
                   <button
                     type="button"
-                    class="edit-trip-poi-btn text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded hover:bg-blue-500/10 transition-colors"
+                    class="edit-trip-poi-btn text-xs text-blue-400 hover:text-blue-300 px-3 py-2 rounded hover:bg-blue-500/10 transition-colors min-h-[44px]"
                     data-poi-id={poi.id}
                     data-trip-notes={poi.tripAdvisorNotes || ''}
                   >
@@ -205,7 +208,7 @@ const complexData = {
                   </button>
                   <button
                     type="button"
-                    class="remove-trip-poi-btn text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                    class="remove-trip-poi-btn text-xs text-red-400 hover:text-red-300 px-3 py-2 rounded hover:bg-red-500/10 transition-colors min-h-[44px]"
                     data-poi-id={poi.id}
                   >
                     Remove from Trip
@@ -236,7 +239,7 @@ const complexData = {
           />
           <button
             type="submit"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]"
           >
             Add to Trip
           </button>
@@ -247,10 +250,13 @@ const complexData = {
 
     <!-- Raw JSON Tab -->
     <div id="panel-raw" class="hidden">
-      <div id="raw-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:500px"></div>
+      <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
+        📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
+      </div>
+      <div id="raw-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:500px; min-height:60dvh"></div>
       <div class="flex items-center gap-3 mt-4">
         <button id="raw-save-btn"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]">
           Save JSON
         </button>
         <p id="raw-status" class="text-sm hidden"></p>
