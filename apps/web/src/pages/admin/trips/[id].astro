@@ -266,9 +266,12 @@ const complexData = {
 
     <!-- Raw JSON Tab -->
     <div id="panel-raw" class="hidden">
-      <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
+      <div id="raw-desktop-warning" class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
         📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
       </div>
+      <script>
+        if (window.innerWidth >= 768) document.getElementById('raw-desktop-warning')?.classList.add('hidden');
+      </script>
       <div id="raw-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:500px; min-height:60dvh"></div>
       <div class="flex items-center gap-3 mt-4">
         <button id="raw-save-btn"
