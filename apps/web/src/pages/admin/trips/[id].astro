@@ -55,6 +55,9 @@ const complexData = {
     <!-- Tabs -->
     <div class="flex border-b border-[var(--color-border)] mb-6">
       <button id="tab-info" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-400 min-h-[44px]">Info</button>
+      <button id="tab-hotels" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Hotels</button>
+      <button id="tab-transport" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Transport</button>
+      <button id="tab-rental" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Rental Cars</button>
       <button id="tab-itinerary" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Itinerary ({trip.days.length} days)</button>
       <button id="tab-pois" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">POIs ({allPOIs.length})</button>
       <button id="tab-raw" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Raw JSON</button>
@@ -143,14 +146,12 @@ const complexData = {
         </div>
 
         <div>
-          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
-            Trip Logistics (JSON) — Stays, Transport, Rental Cars, Map, Notes
-          </label>
-          <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
-            📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
-          </div>
-          <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:260px; min-height:40dvh"></div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Notes (optional)</label>
+          <textarea name="notes" rows="3"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          >{complexData.notes ?? ''}</textarea>
         </div>
+        <input type="hidden" name="mapConfig" id="map-config" value={JSON.stringify(complexData.map ?? null)} />
 
         <div class="flex items-center justify-between pt-2">
           <button type="submit"
@@ -165,6 +166,15 @@ const complexData = {
       </form>
       <p id="info-status" class="text-sm mt-3 hidden"></p>
     </div>
+
+    <!-- Hotels Tab -->
+    <div id="panel-hotels" class="hidden"></div>
+
+    <!-- Transport Tab -->
+    <div id="panel-transport" class="hidden"></div>
+
+    <!-- Rental Cars Tab -->
+    <div id="panel-rental" class="hidden"></div>
 
     <!-- Itinerary Tab -->
     <div id="panel-itinerary" class="hidden">
@@ -291,15 +301,27 @@ const complexData = {
     const dataEl = document.getElementById('trip-data')!;
     const complexData = JSON.parse(dataEl.dataset.complex!);
     const tripJson = dataEl.dataset.tripJson!;
+
+    const logisticsState = {
+      stays: complexData.stays || [],
+      transportLegs: complexData.transportLegs || [],
+      rentalCars: complexData.rentalCars || [],
+    };
     const tripId = dataEl.dataset.tripId!;
     const tripStartDate = dataEl.dataset.tripStartDate!;
 
     // --- Tab switching ---
     const tabInfo = document.getElementById('tab-info')!;
+    const tabHotels = document.getElementById('tab-hotels')!;
+    const tabTransport = document.getElementById('tab-transport')!;
+    const tabRental = document.getElementById('tab-rental')!;
     const tabItinerary = document.getElementById('tab-itinerary')!;
     const tabPois = document.getElementById('tab-pois')!;
     const tabRaw = document.getElementById('tab-raw')!;
     const panelInfo = document.getElementById('panel-info')!;
+    const panelHotels = document.getElementById('panel-hotels')!;
+    const panelTransport = document.getElementById('panel-transport')!;
+    const panelRental = document.getElementById('panel-rental')!;
     const panelItinerary = document.getElementById('panel-itinerary')!;
     const panelPois = document.getElementById('panel-pois')!;
     const panelRaw = document.getElementById('panel-raw')!;
@@ -307,6 +329,9 @@ const complexData = {
     function activateTab(which: string) {
       const tabs = [
         { btn: tabInfo, panel: panelInfo, name: 'info' },
+        { btn: tabHotels, panel: panelHotels, name: 'hotels' },
+        { btn: tabTransport, panel: panelTransport, name: 'transport' },
+        { btn: tabRental, panel: panelRental, name: 'rental' },
         { btn: tabItinerary, panel: panelItinerary, name: 'itinerary' },
         { btn: tabPois, panel: panelPois, name: 'pois' },
         { btn: tabRaw, panel: panelRaw, name: 'raw' },
@@ -323,18 +348,15 @@ const complexData = {
     }
 
     tabInfo.addEventListener('click', () => activateTab('info'));
+    tabHotels.addEventListener('click', () => activateTab('hotels'));
+    tabTransport.addEventListener('click', () => activateTab('transport'));
+    tabRental.addEventListener('click', () => activateTab('rental'));
     tabItinerary.addEventListener('click', () => activateTab('itinerary'));
     tabPois.addEventListener('click', () => activateTab('pois'));
     tabRaw.addEventListener('click', () => activateTab('raw'));
 
     // --- CodeMirror editors ---
     const scrollTheme = EditorView.theme({ "&": { height: "100%" }, ".cm-scroller": { overflow: "auto" } });
-
-    const complexEditor = new EditorView({
-      doc: JSON.stringify(complexData, null, 2),
-      extensions: [basicSetup, json(), scrollTheme],
-      parent: document.getElementById('complex-editor')!,
-    });
 
     const rawEditor = new EditorView({
       doc: tripJson,
@@ -373,18 +395,11 @@ const complexData = {
       const submitBtn = infoForm.querySelector('button[type=submit]') as HTMLButtonElement;
       submitBtn.disabled = true;
 
-      let complexParsed;
-      try {
-        complexParsed = JSON.parse(complexEditor.state.doc.toString());
-      } catch {
-        infoStatus.textContent = 'Complex data JSON is invalid — fix syntax errors before saving.';
-        infoStatus.className = 'text-sm mt-3 text-red-400';
-        infoStatus.classList.remove('hidden');
-        submitBtn.disabled = false;
-        return;
-      }
-
       const pin = fd.get('pin') as string;
+      let mapConfig: unknown = null;
+      try { mapConfig = JSON.parse(fd.get('mapConfig') as string); } catch { /* leave null */ }
+      const notes = (fd.get('notes') as string).trim() || undefined;
+
       const payload = {
         id: fd.get('id'),
         title: fd.get('title'),
@@ -399,7 +414,11 @@ const complexData = {
         pinSalt: fd.get('pinSalt'),
         pinHash: fd.get('pinHash'),
         updatedAt: new Date().toISOString(),
-        ...complexParsed,
+        stays: logisticsState.stays,
+        transportLegs: logisticsState.transportLegs,
+        rentalCars: logisticsState.rentalCars,
+        map: mapConfig,
+        notes,
         days: itineraryState.days,
         poiReferences: itineraryState.poiReferences,
         pois: itineraryState.pois,
@@ -444,6 +463,13 @@ const complexData = {
         if (data.ok) {
           rawStatus.textContent = 'Saved.';
           rawStatus.className = 'text-sm text-green-400';
+          logisticsState.stays = parsed.stays ?? [];
+          logisticsState.transportLegs = parsed.transportLegs ?? [];
+          logisticsState.rentalCars = parsed.rentalCars ?? [];
+          const mapConfigEl = document.getElementById('map-config') as HTMLInputElement;
+          if (mapConfigEl) mapConfigEl.value = JSON.stringify(parsed.map ?? null);
+          const notesEl = document.querySelector<HTMLTextAreaElement>('[name="notes"]');
+          if (notesEl) notesEl.value = parsed.notes ?? '';
         } else {
           rawStatus.textContent = data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed');
           rawStatus.className = 'text-sm text-red-400';
