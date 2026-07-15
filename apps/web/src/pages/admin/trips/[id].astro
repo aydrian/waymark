@@ -55,6 +55,9 @@ const complexData = {
     <!-- Tabs -->
     <div class="flex border-b border-[var(--color-border)] mb-6">
       <button id="tab-info" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-400 min-h-[44px]">Info</button>
+      <button id="tab-hotels" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Hotels</button>
+      <button id="tab-transport" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Transport</button>
+      <button id="tab-rental" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Rental Cars</button>
       <button id="tab-itinerary" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Itinerary ({trip.days.length} days)</button>
       <button id="tab-pois" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">POIs ({allPOIs.length})</button>
       <button id="tab-raw" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-[var(--color-text-secondary)] min-h-[44px]">Raw JSON</button>
@@ -143,14 +146,12 @@ const complexData = {
         </div>
 
         <div>
-          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
-            Trip Logistics (JSON) — Stays, Transport, Rental Cars, Map, Notes
-          </label>
-          <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
-            📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
-          </div>
-          <div id="complex-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:260px; min-height:40dvh"></div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Notes (optional)</label>
+          <textarea name="notes" rows="3"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          >{complexData.notes ?? ''}</textarea>
         </div>
+        <input type="hidden" name="mapConfig" id="map-config" value={JSON.stringify(complexData.map ?? null)} />
 
         <div class="flex items-center justify-between pt-2">
           <button type="submit"
@@ -165,6 +166,15 @@ const complexData = {
       </form>
       <p id="info-status" class="text-sm mt-3 hidden"></p>
     </div>
+
+    <!-- Hotels Tab -->
+    <div id="panel-hotels" class="hidden"></div>
+
+    <!-- Transport Tab -->
+    <div id="panel-transport" class="hidden"></div>
+
+    <!-- Rental Cars Tab -->
+    <div id="panel-rental" class="hidden"></div>
 
     <!-- Itinerary Tab -->
     <div id="panel-itinerary" class="hidden">
@@ -256,9 +266,12 @@ const complexData = {
 
     <!-- Raw JSON Tab -->
     <div id="panel-raw" class="hidden">
-      <div class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
+      <div id="raw-desktop-warning" class="text-xs text-amber-500 bg-amber-500/10 px-3 py-2 rounded-lg mb-3">
         📱 Best viewed on desktop — the JSON editor is not optimized for mobile screens.
       </div>
+      <script>
+        if (window.innerWidth >= 768) document.getElementById('raw-desktop-warning')?.classList.add('hidden');
+      </script>
       <div id="raw-editor" class="rounded-lg border border-[var(--color-border)] overflow-hidden" style="height:500px; min-height:60dvh"></div>
       <div class="flex items-center gap-3 mt-4">
         <button id="raw-save-btn"
@@ -291,15 +304,27 @@ const complexData = {
     const dataEl = document.getElementById('trip-data')!;
     const complexData = JSON.parse(dataEl.dataset.complex!);
     const tripJson = dataEl.dataset.tripJson!;
+
+    const logisticsState = {
+      stays: complexData.stays || [],
+      transportLegs: complexData.transportLegs || [],
+      rentalCars: complexData.rentalCars || [],
+    };
     const tripId = dataEl.dataset.tripId!;
     const tripStartDate = dataEl.dataset.tripStartDate!;
 
     // --- Tab switching ---
     const tabInfo = document.getElementById('tab-info')!;
+    const tabHotels = document.getElementById('tab-hotels')!;
+    const tabTransport = document.getElementById('tab-transport')!;
+    const tabRental = document.getElementById('tab-rental')!;
     const tabItinerary = document.getElementById('tab-itinerary')!;
     const tabPois = document.getElementById('tab-pois')!;
     const tabRaw = document.getElementById('tab-raw')!;
     const panelInfo = document.getElementById('panel-info')!;
+    const panelHotels = document.getElementById('panel-hotels')!;
+    const panelTransport = document.getElementById('panel-transport')!;
+    const panelRental = document.getElementById('panel-rental')!;
     const panelItinerary = document.getElementById('panel-itinerary')!;
     const panelPois = document.getElementById('panel-pois')!;
     const panelRaw = document.getElementById('panel-raw')!;
@@ -307,6 +332,9 @@ const complexData = {
     function activateTab(which: string) {
       const tabs = [
         { btn: tabInfo, panel: panelInfo, name: 'info' },
+        { btn: tabHotels, panel: panelHotels, name: 'hotels' },
+        { btn: tabTransport, panel: panelTransport, name: 'transport' },
+        { btn: tabRental, panel: panelRental, name: 'rental' },
         { btn: tabItinerary, panel: panelItinerary, name: 'itinerary' },
         { btn: tabPois, panel: panelPois, name: 'pois' },
         { btn: tabRaw, panel: panelRaw, name: 'raw' },
@@ -320,21 +348,30 @@ const complexData = {
         btn.classList.toggle('text-[var(--color-text-secondary)]', !isActive);
         panel.classList.toggle('hidden', !isActive);
       });
+
+      const url = new URL(window.location.href);
+      if (which === 'info') url.searchParams.delete('tab');
+      else url.searchParams.set('tab', which);
+      history.replaceState(null, '', url.toString());
     }
 
     tabInfo.addEventListener('click', () => activateTab('info'));
+    tabHotels.addEventListener('click', () => activateTab('hotels'));
+    tabTransport.addEventListener('click', () => activateTab('transport'));
+    tabRental.addEventListener('click', () => activateTab('rental'));
     tabItinerary.addEventListener('click', () => activateTab('itinerary'));
     tabPois.addEventListener('click', () => activateTab('pois'));
     tabRaw.addEventListener('click', () => activateTab('raw'));
 
+    // Read ?tab= from URL on load
+    const tabParam = new URL(window.location.href).searchParams.get('tab');
+    const validTabs = ['info', 'hotels', 'transport', 'rental', 'itinerary', 'pois', 'raw'];
+    if (tabParam && validTabs.includes(tabParam)) {
+      activateTab(tabParam);
+    }
+
     // --- CodeMirror editors ---
     const scrollTheme = EditorView.theme({ "&": { height: "100%" }, ".cm-scroller": { overflow: "auto" } });
-
-    const complexEditor = new EditorView({
-      doc: JSON.stringify(complexData, null, 2),
-      extensions: [basicSetup, json(), scrollTheme],
-      parent: document.getElementById('complex-editor')!,
-    });
 
     const rawEditor = new EditorView({
       doc: tripJson,
@@ -373,18 +410,11 @@ const complexData = {
       const submitBtn = infoForm.querySelector('button[type=submit]') as HTMLButtonElement;
       submitBtn.disabled = true;
 
-      let complexParsed;
-      try {
-        complexParsed = JSON.parse(complexEditor.state.doc.toString());
-      } catch {
-        infoStatus.textContent = 'Complex data JSON is invalid — fix syntax errors before saving.';
-        infoStatus.className = 'text-sm mt-3 text-red-400';
-        infoStatus.classList.remove('hidden');
-        submitBtn.disabled = false;
-        return;
-      }
-
       const pin = fd.get('pin') as string;
+      let mapConfig: unknown = null;
+      try { mapConfig = JSON.parse(fd.get('mapConfig') as string); } catch { /* leave null */ }
+      const notes = (fd.get('notes') as string).trim() || undefined;
+
       const payload = {
         id: fd.get('id'),
         title: fd.get('title'),
@@ -399,7 +429,11 @@ const complexData = {
         pinSalt: fd.get('pinSalt'),
         pinHash: fd.get('pinHash'),
         updatedAt: new Date().toISOString(),
-        ...complexParsed,
+        stays: logisticsState.stays,
+        transportLegs: logisticsState.transportLegs,
+        rentalCars: logisticsState.rentalCars,
+        map: mapConfig,
+        notes,
         days: itineraryState.days,
         poiReferences: itineraryState.poiReferences,
         pois: itineraryState.pois,
@@ -444,6 +478,13 @@ const complexData = {
         if (data.ok) {
           rawStatus.textContent = 'Saved.';
           rawStatus.className = 'text-sm text-green-400';
+          logisticsState.stays = parsed.stays ?? [];
+          logisticsState.transportLegs = parsed.transportLegs ?? [];
+          logisticsState.rentalCars = parsed.rentalCars ?? [];
+          const mapConfigEl = document.getElementById('map-config') as HTMLInputElement;
+          if (mapConfigEl) mapConfigEl.value = JSON.stringify(parsed.map ?? null);
+          const notesEl = document.querySelector<HTMLTextAreaElement>('[name="notes"]');
+          if (notesEl) notesEl.value = parsed.notes ?? '';
         } else {
           rawStatus.textContent = data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed');
           rawStatus.className = 'text-sm text-red-400';
@@ -558,6 +599,8 @@ const complexData = {
       allGlobalPOIs: JSON.parse(dataEl.dataset.allPois!) as any[],
     };
 
+    const manuallyReordered: Record<number, boolean> = {};
+
     const ITEM_TYPE_EMOJI: Record<string, string> = {
       hotel: '🏨', transport: '🚗', activity: '🎯', restaurant: '🍽️', note: '📝', transfer: '🚕',
     };
@@ -611,6 +654,7 @@ const complexData = {
       const target = itemIdx + dir;
       if (target < 0 || target >= items.length) return;
       [items[itemIdx], items[target]] = [items[target], items[itemIdx]];
+      manuallyReordered[dayIdx] = true;
       renderItinerary();
     }
 
@@ -774,9 +818,81 @@ const complexData = {
         return;
       }
 
+      function makeDayDropZone(insertIdx: number): HTMLDivElement {
+        const zone = document.createElement('div');
+        zone.dataset.dayDrop = String(insertIdx);
+        zone.className = 'transition-all h-[6px]';
+        zone.addEventListener('dragover', (e) => {
+          if (!e.dataTransfer!.types.includes('application/x-day')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-8 bg-blue-500/10 border-t-2 border-blue-500';
+        });
+        zone.addEventListener('dragleave', () => {
+          zone.className = 'transition-all h-[6px]';
+        });
+        zone.addEventListener('drop', (e) => {
+          if (!e.dataTransfer!.types.includes('application/x-day')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-[6px]';
+          const fromIdx = parseInt(e.dataTransfer!.getData('application/x-day'), 10);
+          if (isNaN(fromIdx)) return;
+          const days = itineraryState.days;
+          const [moved] = days.splice(fromIdx, 1);
+          const insertAt = fromIdx < insertIdx ? insertIdx - 1 : insertIdx;
+          days.splice(insertAt, 0, moved);
+          days.forEach((d, i) => { d.dayNumber = i + 1; });
+          renderItinerary();
+        });
+        return zone;
+      }
+
+      function makeItemDropZone(dayIdx: number, insertIdx: number): HTMLDivElement {
+        const zone = document.createElement('div');
+        zone.dataset.itemDrop = `${dayIdx}:${insertIdx}`;
+        zone.className = 'transition-all h-[6px]';
+        zone.addEventListener('dragover', (e) => {
+          if (!e.dataTransfer!.types.includes('text/plain')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-8 bg-blue-500/10 border-t-2 border-blue-500';
+        });
+        zone.addEventListener('dragleave', () => {
+          zone.className = 'transition-all h-[6px]';
+        });
+        zone.addEventListener('drop', (e) => {
+          if (!e.dataTransfer!.types.includes('text/plain')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          zone.className = 'transition-all h-[6px]';
+          const fromIdx = parseInt(e.dataTransfer!.getData('text/plain'), 10);
+          if (isNaN(fromIdx)) return;
+          const items = itineraryState.days[dayIdx].items;
+          const [moved] = items.splice(fromIdx, 1);
+          const insertAt = fromIdx < insertIdx ? insertIdx - 1 : insertIdx;
+          items.splice(insertAt, 0, moved);
+          manuallyReordered[dayIdx] = true;
+          renderItinerary();
+        });
+        return zone;
+      }
+
+      // Top drop zone (insert before first day)
+      container.appendChild(makeDayDropZone(0));
+
       itineraryState.days.forEach((day, dayIdx) => {
         const card = document.createElement('div');
-        card.className = 'mb-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] overflow-hidden';
+        card.className = 'border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] overflow-hidden';
+        card.draggable = true;
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer!.setData('application/x-day', String(dayIdx));
+          e.dataTransfer!.effectAllowed = 'move';
+          card.classList.add('opacity-50');
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('opacity-50');
+        });
 
         // Day header
         const header = document.createElement('div');
@@ -820,22 +936,50 @@ const complexData = {
         delDayBtn.title = 'Delete day';
         delDayBtn.addEventListener('click', () => removeDay(dayIdx));
 
+        const sortBtn = document.createElement('button');
+        sortBtn.type = 'button';
+        sortBtn.className = 'text-xs text-[var(--color-text-muted)] hover:text-blue-400 min-h-[44px] px-2 transition-colors';
+        sortBtn.textContent = '↻ Sort';
+        sortBtn.title = 'Re-sort items by start time';
+        sortBtn.addEventListener('click', () => {
+          manuallyReordered[dayIdx] = false;
+          renderItinerary();
+        });
+
         header.appendChild(dayLabel);
         header.appendChild(dateLabel);
         header.appendChild(titleBtn);
+        header.appendChild(sortBtn);
         header.appendChild(reorderUp);
         header.appendChild(reorderDown);
         header.appendChild(delDayBtn);
         card.appendChild(header);
+
+        if (!manuallyReordered[dayIdx]) {
+          const withTime = day.items.filter((i: any) => i.startTime);
+          const withoutTime = day.items.filter((i: any) => !i.startTime);
+          withTime.sort((a: any, b: any) => a.startTime.localeCompare(b.startTime));
+          day.items = [...withTime, ...withoutTime];
+        }
 
         // Items list
         const itemsSection = document.createElement('div');
         itemsSection.className = 'p-3 flex flex-col gap-2';
 
         if (day.items && day.items.length > 0) {
+          itemsSection.appendChild(makeItemDropZone(dayIdx, 0));
           day.items.forEach((item: any, itemIdx: number) => {
             const row = document.createElement('div');
             row.className = 'flex items-center gap-2 px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-subtle)] hover:border-blue-500/50 transition-colors';
+            row.draggable = true;
+            row.addEventListener('dragstart', (e) => {
+              e.dataTransfer!.setData('text/plain', String(itemIdx));
+              e.dataTransfer!.effectAllowed = 'move';
+              row.classList.add('opacity-50');
+            });
+            row.addEventListener('dragend', () => {
+              row.classList.remove('opacity-50');
+            });
 
             const emoji = document.createElement('span');
             emoji.className = 'text-base shrink-0';
@@ -884,6 +1028,7 @@ const complexData = {
             row.appendChild(itemDown);
             row.appendChild(delItemBtn);
             itemsSection.appendChild(row);
+            itemsSection.appendChild(makeItemDropZone(dayIdx, itemIdx + 1));
           });
         } else {
           const empty = document.createElement('p');
@@ -902,11 +1047,483 @@ const complexData = {
 
         card.appendChild(itemsSection);
         container.appendChild(card);
+        container.appendChild(makeDayDropZone(dayIdx + 1));
       });
     }
 
     // Initialize itinerary editor
     renderItinerary();
+
+    // --- Hotels Tab ---
+    function openHotelModal(idx: number | null) {
+      const existing = idx !== null ? logisticsState.stays[idx] : null;
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-8 px-4 overflow-y-auto';
+
+      const modal = document.createElement('div');
+      modal.className = 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 w-full max-w-lg mb-8';
+
+      const fields = [
+        { key: 'title', label: 'Title', kind: 'text', req: true, def: '' },
+        { key: 'status', label: 'Status', kind: 'select', options: ['booked','quoted','pending','canceled'], def: 'pending' },
+        { key: 'checkinDate', label: 'Check-in Date', kind: 'date', req: true, def: '' },
+        { key: 'checkinTime', label: 'Check-in Time', kind: 'time', def: '' },
+        { key: 'checkoutDate', label: 'Check-out Date', kind: 'date', req: true, def: '' },
+        { key: 'checkoutTime', label: 'Check-out Time', kind: 'time', def: '' },
+        { key: 'location', label: 'Location', kind: 'text', def: '' },
+        { key: 'address', label: 'Address', kind: 'text', def: '' },
+        { key: 'lat', label: 'Latitude', kind: 'number', def: '' },
+        { key: 'lng', label: 'Longitude', kind: 'number', def: '' },
+        { key: 'googleMapsUrl', label: 'Google Maps URL', kind: 'url', def: '' },
+        { key: 'vendor', label: 'Vendor', kind: 'text', def: '' },
+        { key: 'confirmationNumber', label: 'Confirmation #', kind: 'text', def: '' },
+        { key: 'cost', label: 'Cost', kind: 'number', def: '' },
+        { key: 'costCurrency', label: 'Currency', kind: 'select', options: ['USD','EUR','JPY','GBP','CAD','AUD'], def: 'USD' },
+        { key: 'notes', label: 'Notes', kind: 'textarea', def: '' },
+      ] as const;
+
+      modal.innerHTML = `
+        <h3 class="text-sm font-semibold mb-4">${existing ? 'Edit Hotel Stay' : 'Add Hotel Stay'}</h3>
+        <div class="flex flex-col gap-3">
+          ${(fields as any[]).map(f => {
+            const val = existing ? ((existing as any)[f.key] ?? f.def) : f.def;
+            if (f.kind === 'select') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <select name="${f.key}" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]">
+                  ${(f as any).options.map((o: string) => `<option value="${o}"${val === o ? ' selected' : ''}>${o}</option>`).join('')}
+                </select>
+              </div>`;
+            }
+            if (f.kind === 'textarea') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <textarea name="${f.key}" rows="3" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none">${val}</textarea>
+              </div>`;
+            }
+            return `<div>
+              <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+              <input name="${f.key}" type="${f.kind}" value="${val}" ${(f as any).req ? 'required' : ''} class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button type="button" id="hotel-modal-save" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]">Save</button>
+          <button type="button" id="hotel-modal-cancel" class="px-4 py-2 border border-[var(--color-border)] text-sm rounded-lg min-h-[44px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Cancel</button>
+        </div>
+      `;
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
+      modal.querySelector('#hotel-modal-cancel')!.addEventListener('click', () => document.body.removeChild(overlay));
+
+      modal.querySelector('#hotel-modal-save')!.addEventListener('click', () => {
+        const titleInput = modal.querySelector<HTMLInputElement>('[name="title"]')!;
+        if (!titleInput.value.trim()) { titleInput.focus(); return; }
+        const checkinInput = modal.querySelector<HTMLInputElement>('[name="checkinDate"]')!;
+        if (!checkinInput.value) { checkinInput.focus(); return; }
+        const checkoutInput = modal.querySelector<HTMLInputElement>('[name="checkoutDate"]')!;
+        if (!checkoutInput.value) { checkoutInput.focus(); return; }
+
+        const stay: any = { id: (existing as any)?.id ?? generateId() };
+        (fields as any[]).forEach(f => {
+          const el = modal.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${f.key}"]`)!;
+          const v = el.value;
+          if (f.kind === 'number') {
+            if (v !== '') stay[f.key] = parseFloat(v);
+          } else {
+            if (v !== '') stay[f.key] = v;
+          }
+        });
+
+        if (idx !== null) {
+          logisticsState.stays[idx] = stay;
+        } else {
+          logisticsState.stays.push(stay);
+        }
+        document.body.removeChild(overlay);
+        renderHotels();
+      });
+    }
+
+    function renderHotels() {
+      const container = panelHotels;
+      container.innerHTML = '';
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'mb-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]';
+      addBtn.textContent = '+ Add Hotel';
+      addBtn.addEventListener('click', () => openHotelModal(null));
+      container.appendChild(addBtn);
+
+      if (logisticsState.stays.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'text-sm text-[var(--color-text-muted)]';
+        empty.textContent = 'No hotel stays yet.';
+        container.appendChild(empty);
+        return;
+      }
+
+      logisticsState.stays.forEach((stay: any, stayIdx: number) => {
+        const card = document.createElement('div');
+        card.className = 'border border-[var(--color-border)] rounded-lg p-4 mb-3 bg-[var(--color-surface)]';
+
+        const statusClass = ITEM_STATUS_COLOR[stay.status] ?? 'text-[var(--color-text-muted)] bg-[var(--color-bg-subtle)]';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-medium">${stay.title}</span>
+              ${stay.status ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${statusClass}">${stay.status}</span>` : ''}
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button type="button" class="hotel-edit text-xs text-blue-400 hover:text-blue-300 min-h-[44px] px-1">Edit</button>
+              <button type="button" class="hotel-remove text-xs text-red-400/60 hover:text-red-400 min-h-[44px] px-1">Remove</button>
+            </div>
+          </div>
+          ${stay.checkinDate && stay.checkoutDate ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">${stay.checkinDate}${stay.checkinTime ? ' ' + stay.checkinTime : ''} → ${stay.checkoutDate}${stay.checkoutTime ? ' ' + stay.checkoutTime : ''}</p>` : ''}
+          ${stay.location ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">📍 ${stay.location}</p>` : ''}
+          ${stay.vendor ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">🏢 ${stay.vendor}</p>` : ''}
+          ${stay.confirmationNumber ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">Conf: ${stay.confirmationNumber}</p>` : ''}
+          ${stay.cost != null ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">💰 ${stay.cost} ${stay.costCurrency ?? 'USD'}</p>` : ''}
+          ${stay.notes ? `<p class="text-xs text-[var(--color-text-muted)] mt-2 italic">${stay.notes}</p>` : ''}
+        `;
+
+        card.querySelector('.hotel-edit')!.addEventListener('click', () => openHotelModal(stayIdx));
+        card.querySelector('.hotel-remove')!.addEventListener('click', () => {
+          if (!confirm('Remove this hotel stay?')) return;
+          logisticsState.stays.splice(stayIdx, 1);
+          renderHotels();
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    renderHotels();
+
+    // --- Transport Tab ---
+    function openTransportModal(idx: number | null) {
+      const existing = idx !== null ? logisticsState.transportLegs[idx] : null;
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-8 px-4 overflow-y-auto';
+
+      const modal = document.createElement('div');
+      modal.className = 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 w-full max-w-lg mb-8';
+
+      const fields = [
+        { key: 'type', label: 'Type', kind: 'select', options: ['flight','train','ferry','bus','other'], def: 'flight' },
+        { key: 'title', label: 'Title', kind: 'text', req: true, def: '' },
+        { key: 'status', label: 'Status', kind: 'select', options: ['booked','quoted','pending','canceled'], def: 'pending' },
+        { key: 'departureDate', label: 'Departure Date', kind: 'date', req: true, def: '' },
+        { key: 'departureTime', label: 'Departure Time', kind: 'time', def: '' },
+        { key: 'departureTimezone', label: 'Departure Timezone', kind: 'text', req: true, def: '' },
+        { key: 'departureLocation', label: 'Departure Location', kind: 'text', def: '' },
+        { key: 'departureLat', label: 'Departure Latitude', kind: 'number', def: '' },
+        { key: 'departureLng', label: 'Departure Longitude', kind: 'number', def: '' },
+        { key: 'arrivalDate', label: 'Arrival Date', kind: 'date', req: true, def: '' },
+        { key: 'arrivalTime', label: 'Arrival Time', kind: 'time', def: '' },
+        { key: 'arrivalTimezone', label: 'Arrival Timezone', kind: 'text', req: true, def: '' },
+        { key: 'arrivalLocation', label: 'Arrival Location', kind: 'text', def: '' },
+        { key: 'arrivalLat', label: 'Arrival Latitude', kind: 'number', def: '' },
+        { key: 'arrivalLng', label: 'Arrival Longitude', kind: 'number', def: '' },
+        { key: 'vendor', label: 'Vendor', kind: 'text', def: '' },
+        { key: 'confirmationNumber', label: 'Confirmation #', kind: 'text', def: '' },
+        { key: 'seat', label: 'Seat', kind: 'text', def: '' },
+        { key: 'notes', label: 'Notes', kind: 'textarea', def: '' },
+        { key: 'cost', label: 'Cost', kind: 'number', def: '' },
+        { key: 'costCurrency', label: 'Currency', kind: 'select', options: ['USD','EUR','JPY','GBP','CAD','AUD'], def: 'USD' },
+      ] as const;
+
+      modal.innerHTML = `
+        <h3 class="text-sm font-semibold mb-4">${existing ? 'Edit Transport Leg' : 'Add Transport Leg'}</h3>
+        <div class="flex flex-col gap-3">
+          ${(fields as any[]).map(f => {
+            const val = existing ? ((existing as any)[f.key] ?? f.def) : f.def;
+            if (f.kind === 'select') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <select name="${f.key}" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]">
+                  ${(f as any).options.map((o: string) => `<option value="${o}"${val === o ? ' selected' : ''}>${o}</option>`).join('')}
+                </select>
+              </div>`;
+            }
+            if (f.kind === 'textarea') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <textarea name="${f.key}" rows="3" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none">${val}</textarea>
+              </div>`;
+            }
+            return `<div>
+              <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+              <input name="${f.key}" type="${f.kind}" value="${val}" ${(f as any).req ? 'required' : ''} class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button type="button" id="transport-modal-save" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]">Save</button>
+          <button type="button" id="transport-modal-cancel" class="px-4 py-2 border border-[var(--color-border)] text-sm rounded-lg min-h-[44px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Cancel</button>
+        </div>
+      `;
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
+      modal.querySelector('#transport-modal-cancel')!.addEventListener('click', () => document.body.removeChild(overlay));
+
+      modal.querySelector('#transport-modal-save')!.addEventListener('click', () => {
+        const titleInput = modal.querySelector<HTMLInputElement>('[name="title"]')!;
+        if (!titleInput.value.trim()) { titleInput.focus(); return; }
+        const depDateInput = modal.querySelector<HTMLInputElement>('[name="departureDate"]')!;
+        if (!depDateInput.value) { depDateInput.focus(); return; }
+        const arrDateInput = modal.querySelector<HTMLInputElement>('[name="arrivalDate"]')!;
+        if (!arrDateInput.value) { arrDateInput.focus(); return; }
+        const depTzInput = modal.querySelector<HTMLInputElement>('[name="departureTimezone"]')!;
+        if (!depTzInput.value.trim()) { depTzInput.focus(); return; }
+        const arrTzInput = modal.querySelector<HTMLInputElement>('[name="arrivalTimezone"]')!;
+        if (!arrTzInput.value.trim()) { arrTzInput.focus(); return; }
+
+        const leg: any = { id: (existing as any)?.id ?? generateId() };
+        (fields as any[]).forEach(f => {
+          const el = modal.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${f.key}"]`)!;
+          const v = el.value;
+          if (f.kind === 'number') {
+            if (v !== '') leg[f.key] = parseFloat(v);
+          } else {
+            if (v !== '') leg[f.key] = v;
+          }
+        });
+
+        if (idx !== null) {
+          logisticsState.transportLegs[idx] = leg;
+        } else {
+          logisticsState.transportLegs.push(leg);
+        }
+        document.body.removeChild(overlay);
+        renderTransport();
+      });
+    }
+
+    function renderTransport() {
+      const container = panelTransport;
+      container.innerHTML = '';
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'mb-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]';
+      addBtn.textContent = '+ Add Transport';
+      addBtn.addEventListener('click', () => openTransportModal(null));
+      container.appendChild(addBtn);
+
+      if (logisticsState.transportLegs.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'text-sm text-[var(--color-text-muted)]';
+        empty.textContent = 'No transport legs yet.';
+        container.appendChild(empty);
+        return;
+      }
+
+      logisticsState.transportLegs.forEach((leg: any, legIdx: number) => {
+        const card = document.createElement('div');
+        card.className = 'border border-[var(--color-border)] rounded-lg p-4 mb-3 bg-[var(--color-surface)]';
+
+        const statusClass = ITEM_STATUS_COLOR[leg.status] ?? 'text-[var(--color-text-muted)] bg-[var(--color-bg-subtle)]';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-medium">${leg.title}</span>
+              ${leg.type ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)]">${leg.type}</span>` : ''}
+              ${leg.status ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${statusClass}">${leg.status}</span>` : ''}
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button type="button" class="transport-edit text-xs text-blue-400 hover:text-blue-300 min-h-[44px] px-1">Edit</button>
+              <button type="button" class="transport-remove text-xs text-red-400/60 hover:text-red-400 min-h-[44px] px-1">Remove</button>
+            </div>
+          </div>
+          ${leg.departureDate && leg.arrivalDate ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">${leg.departureDate}${leg.departureTime ? ' ' + leg.departureTime : ''}${leg.departureLocation ? ' (' + leg.departureLocation + ')' : ''} → ${leg.arrivalDate}${leg.arrivalTime ? ' ' + leg.arrivalTime : ''}${leg.arrivalLocation ? ' (' + leg.arrivalLocation + ')' : ''}</p>` : ''}
+          ${leg.vendor ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">🏢 ${leg.vendor}</p>` : ''}
+          ${leg.confirmationNumber ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">Conf: ${leg.confirmationNumber}</p>` : ''}
+          ${leg.seat ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">Seat: ${leg.seat}</p>` : ''}
+          ${leg.cost != null ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">💰 ${leg.cost} ${leg.costCurrency ?? 'USD'}</p>` : ''}
+          ${leg.notes ? `<p class="text-xs text-[var(--color-text-muted)] mt-2 italic">${leg.notes}</p>` : ''}
+        `;
+
+        card.querySelector('.transport-edit')!.addEventListener('click', () => openTransportModal(legIdx));
+        card.querySelector('.transport-remove')!.addEventListener('click', () => {
+          if (!confirm('Remove this transport leg?')) return;
+          logisticsState.transportLegs.splice(legIdx, 1);
+          renderTransport();
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    renderTransport();
+
+    // --- Rental Cars Tab ---
+    function openRentalCarModal(idx: number | null) {
+      const existing = idx !== null ? logisticsState.rentalCars[idx] : null;
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-8 px-4 overflow-y-auto';
+
+      const modal = document.createElement('div');
+      modal.className = 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 w-full max-w-lg mb-8';
+
+      const fields = [
+        { key: 'title', label: 'Title', kind: 'text', req: true, def: '' },
+        { key: 'status', label: 'Status', kind: 'select', options: ['booked','quoted','pending','canceled'], def: 'pending' },
+        { key: 'pickupDate', label: 'Pickup Date', kind: 'date', req: true, def: '' },
+        { key: 'pickupTime', label: 'Pickup Time', kind: 'time', def: '' },
+        { key: 'pickupTimezone', label: 'Pickup Timezone', kind: 'text', req: true, def: '' },
+        { key: 'pickupLocation', label: 'Pickup Location', kind: 'text', def: '' },
+        { key: 'pickupLat', label: 'Pickup Latitude', kind: 'number', def: '' },
+        { key: 'pickupLng', label: 'Pickup Longitude', kind: 'number', def: '' },
+        { key: 'dropoffDate', label: 'Drop-off Date', kind: 'date', req: true, def: '' },
+        { key: 'dropoffTime', label: 'Drop-off Time', kind: 'time', def: '' },
+        { key: 'dropoffTimezone', label: 'Drop-off Timezone', kind: 'text', req: true, def: '' },
+        { key: 'dropoffLocation', label: 'Drop-off Location', kind: 'text', def: '' },
+        { key: 'dropoffLat', label: 'Drop-off Latitude', kind: 'number', def: '' },
+        { key: 'dropoffLng', label: 'Drop-off Longitude', kind: 'number', def: '' },
+        { key: 'carClass', label: 'Car Class', kind: 'text', def: '' },
+        { key: 'vendor', label: 'Vendor', kind: 'text', def: '' },
+        { key: 'confirmationNumber', label: 'Confirmation #', kind: 'text', def: '' },
+        { key: 'notes', label: 'Notes', kind: 'textarea', def: '' },
+        { key: 'cost', label: 'Cost', kind: 'number', def: '' },
+        { key: 'costCurrency', label: 'Currency', kind: 'select', options: ['USD','EUR','JPY','GBP','CAD','AUD'], def: 'USD' },
+      ] as const;
+
+      modal.innerHTML = `
+        <h3 class="text-sm font-semibold mb-4">${existing ? 'Edit Rental Car' : 'Add Rental Car'}</h3>
+        <div class="flex flex-col gap-3">
+          ${(fields as any[]).map(f => {
+            const val = existing ? ((existing as any)[f.key] ?? f.def) : f.def;
+            if (f.kind === 'select') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <select name="${f.key}" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]">
+                  ${(f as any).options.map((o: string) => `<option value="${o}"${val === o ? ' selected' : ''}>${o}</option>`).join('')}
+                </select>
+              </div>`;
+            }
+            if (f.kind === 'textarea') {
+              return `<div>
+                <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+                <textarea name="${f.key}" rows="3" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none">${val}</textarea>
+              </div>`;
+            }
+            return `<div>
+              <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">${f.label}</label>
+              <input name="${f.key}" type="${f.kind}" value="${val}" ${(f as any).req ? 'required' : ''} class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]" />
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button type="button" id="rental-modal-save" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]">Save</button>
+          <button type="button" id="rental-modal-cancel" class="px-4 py-2 border border-[var(--color-border)] text-sm rounded-lg min-h-[44px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Cancel</button>
+        </div>
+      `;
+
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
+      modal.querySelector('#rental-modal-cancel')!.addEventListener('click', () => document.body.removeChild(overlay));
+
+      modal.querySelector('#rental-modal-save')!.addEventListener('click', () => {
+        const titleInput = modal.querySelector<HTMLInputElement>('[name="title"]')!;
+        if (!titleInput.value.trim()) { titleInput.focus(); return; }
+        const pickupDateInput = modal.querySelector<HTMLInputElement>('[name="pickupDate"]')!;
+        if (!pickupDateInput.value) { pickupDateInput.focus(); return; }
+        const dropoffDateInput = modal.querySelector<HTMLInputElement>('[name="dropoffDate"]')!;
+        if (!dropoffDateInput.value) { dropoffDateInput.focus(); return; }
+        const pickupTzInput = modal.querySelector<HTMLInputElement>('[name="pickupTimezone"]')!;
+        if (!pickupTzInput.value.trim()) { pickupTzInput.focus(); return; }
+        const dropoffTzInput = modal.querySelector<HTMLInputElement>('[name="dropoffTimezone"]')!;
+        if (!dropoffTzInput.value.trim()) { dropoffTzInput.focus(); return; }
+
+        const car: any = { id: (existing as any)?.id ?? generateId() };
+        (fields as any[]).forEach(f => {
+          const el = modal.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name="${f.key}"]`)!;
+          const v = el.value;
+          if (f.kind === 'number') {
+            if (v !== '') car[f.key] = parseFloat(v);
+          } else {
+            if (v !== '') car[f.key] = v;
+          }
+        });
+
+        if (idx !== null) {
+          logisticsState.rentalCars[idx] = car;
+        } else {
+          logisticsState.rentalCars.push(car);
+        }
+        document.body.removeChild(overlay);
+        renderRentalCars();
+      });
+    }
+
+    function renderRentalCars() {
+      const container = panelRental;
+      container.innerHTML = '';
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'mb-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg min-h-[44px]';
+      addBtn.textContent = '+ Add Rental Car';
+      addBtn.addEventListener('click', () => openRentalCarModal(null));
+      container.appendChild(addBtn);
+
+      if (logisticsState.rentalCars.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'text-sm text-[var(--color-text-muted)]';
+        empty.textContent = 'No rental cars yet.';
+        container.appendChild(empty);
+        return;
+      }
+
+      logisticsState.rentalCars.forEach((car: any, carIdx: number) => {
+        const card = document.createElement('div');
+        card.className = 'border border-[var(--color-border)] rounded-lg p-4 mb-3 bg-[var(--color-surface)]';
+
+        const statusClass = ITEM_STATUS_COLOR[car.status] ?? 'text-[var(--color-text-muted)] bg-[var(--color-bg-subtle)]';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-medium">${car.title}</span>
+              ${car.carClass ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)]">${car.carClass}</span>` : ''}
+              ${car.status ? `<span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${statusClass}">${car.status}</span>` : ''}
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <button type="button" class="rental-edit text-xs text-blue-400 hover:text-blue-300 min-h-[44px] px-1">Edit</button>
+              <button type="button" class="rental-remove text-xs text-red-400/60 hover:text-red-400 min-h-[44px] px-1">Remove</button>
+            </div>
+          </div>
+          ${car.pickupDate && car.dropoffDate ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">${car.pickupDate}${car.pickupTime ? ' ' + car.pickupTime : ''}${car.pickupLocation ? ' (' + car.pickupLocation + ')' : ''} → ${car.dropoffDate}${car.dropoffTime ? ' ' + car.dropoffTime : ''}${car.dropoffLocation ? ' (' + car.dropoffLocation + ')' : ''}</p>` : ''}
+          ${car.vendor ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">🏢 ${car.vendor}</p>` : ''}
+          ${car.confirmationNumber ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">Conf: ${car.confirmationNumber}</p>` : ''}
+          ${car.cost != null ? `<p class="text-xs text-[var(--color-text-secondary)] mb-1">💰 ${car.cost} ${car.costCurrency ?? 'USD'}</p>` : ''}
+          ${car.notes ? `<p class="text-xs text-[var(--color-text-muted)] mt-2 italic">${car.notes}</p>` : ''}
+        `;
+
+        card.querySelector('.rental-edit')!.addEventListener('click', () => openRentalCarModal(carIdx));
+        card.querySelector('.rental-remove')!.addEventListener('click', () => {
+          if (!confirm('Remove this rental car?')) return;
+          logisticsState.rentalCars.splice(carIdx, 1);
+          renderRentalCars();
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    renderRentalCars();
 
     // --- Delete ---
     const deleteBtn = document.getElementById('delete-btn')!;
