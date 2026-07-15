@@ -26,17 +26,17 @@ if (redirect) return redirect;
           Name <span class="text-red-400">*</span>
         </label>
         <input name="name" required
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
           placeholder="Eiffel Tower" />
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
             City <span class="text-red-400">*</span>
           </label>
           <input name="city" required
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
             placeholder="Paris" />
         </div>
         <div>
@@ -44,7 +44,7 @@ if (redirect) return redirect;
             Category <span class="text-red-400">*</span>
           </label>
           <select name="category" required
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500">
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]">
             <option value="">Select category...</option>
             <option value="restaurant">Restaurant</option>
             <option value="attraction">Attraction</option>
@@ -61,17 +61,17 @@ if (redirect) return redirect;
           Address
         </label>
         <input name="address"
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
           placeholder="Champ de Mars, 5 Av. Anatole France" />
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
             Website
           </label>
           <input name="website" type="url"
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
             placeholder="https://..." />
         </div>
         <div>
@@ -79,7 +79,7 @@ if (redirect) return redirect;
             Google Maps URL
           </label>
           <input name="googleMapsUrl" type="url"
-            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
             placeholder="https://maps.google.com/..." />
         </div>
       </div>
@@ -89,7 +89,7 @@ if (redirect) return redirect;
           Description
         </label>
         <textarea name="description" rows="3"
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none min-h-[44px]"
           placeholder="Brief description of the place..."></textarea>
       </div>
 
@@ -98,13 +98,13 @@ if (redirect) return redirect;
           Advisor Notes <span class="text-[var(--color-text-muted)]">(visible to all trips using this POI)</span>
         </label>
         <textarea name="advisorNotes" rows="2"
-          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none min-h-[44px]"
           placeholder="Internal notes, recommendations, tips..."></textarea>
       </div>
 
       <div class="pt-2">
         <button type="submit"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]">
           Create Global POI
         </button>
       </div>

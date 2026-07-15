@@ -69,7 +69,7 @@ const hiddenCount = trips.length - visibleTrips.length;
       <h1 class="text-2xl font-bold">All Trips</h1>
       <a
         href="/admin/trips/new"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px] inline-flex items-center"
       >
         + New Trip
       </a>
@@ -117,13 +117,13 @@ const hiddenCount = trips.length - visibleTrips.length;
                 </span>
                 <a
                   href={`/admin/trips/${trip.id}`}
-                  class="px-3 py-1.5 text-sm font-medium rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-blue-500 hover:text-blue-400 transition-colors"
+                  class="px-3 py-1.5 text-sm font-medium rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-blue-500 hover:text-blue-400 transition-colors min-h-[44px] inline-flex items-center"
                 >
                   Edit
                 </a>
                 <a
                   href={`/trip/${trip.id}`}
-                  class="px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                  class="px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors min-h-[44px] inline-flex items-center"
                 >
                   View
                 </a>
