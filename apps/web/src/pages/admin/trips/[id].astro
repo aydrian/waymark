@@ -587,6 +587,8 @@ const complexData = {
       allGlobalPOIs: JSON.parse(dataEl.dataset.allPois!) as any[],
     };
 
+    const manuallyReordered: Record<number, boolean> = {};
+
     const ITEM_TYPE_EMOJI: Record<string, string> = {
       hotel: '🏨', transport: '🚗', activity: '🎯', restaurant: '🍽️', note: '📝', transfer: '🚕',
     };
@@ -640,6 +642,7 @@ const complexData = {
       const target = itemIdx + dir;
       if (target < 0 || target >= items.length) return;
       [items[itemIdx], items[target]] = [items[target], items[itemIdx]];
+      manuallyReordered[dayIdx] = true;
       renderItinerary();
     }
 
@@ -849,13 +852,31 @@ const complexData = {
         delDayBtn.title = 'Delete day';
         delDayBtn.addEventListener('click', () => removeDay(dayIdx));
 
+        const sortBtn = document.createElement('button');
+        sortBtn.type = 'button';
+        sortBtn.className = 'text-xs text-[var(--color-text-muted)] hover:text-blue-400 min-h-[44px] px-2 transition-colors';
+        sortBtn.textContent = '↻ Sort';
+        sortBtn.title = 'Re-sort items by start time';
+        sortBtn.addEventListener('click', () => {
+          manuallyReordered[dayIdx] = false;
+          renderItinerary();
+        });
+
         header.appendChild(dayLabel);
         header.appendChild(dateLabel);
         header.appendChild(titleBtn);
+        header.appendChild(sortBtn);
         header.appendChild(reorderUp);
         header.appendChild(reorderDown);
         header.appendChild(delDayBtn);
         card.appendChild(header);
+
+        if (!manuallyReordered[dayIdx]) {
+          const withTime = day.items.filter((i: any) => i.startTime);
+          const withoutTime = day.items.filter((i: any) => !i.startTime);
+          withTime.sort((a: any, b: any) => a.startTime.localeCompare(b.startTime));
+          day.items = [...withTime, ...withoutTime];
+        }
 
         // Items list
         const itemsSection = document.createElement('div');
@@ -865,6 +886,37 @@ const complexData = {
           day.items.forEach((item: any, itemIdx: number) => {
             const row = document.createElement('div');
             row.className = 'flex items-center gap-2 px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg-subtle)] hover:border-blue-500/50 transition-colors';
+            row.draggable = true;
+            row.addEventListener('dragstart', (e) => {
+              e.dataTransfer!.setData('text/plain', String(itemIdx));
+              e.dataTransfer!.effectAllowed = 'move';
+              row.classList.add('opacity-50');
+            });
+            row.addEventListener('dragend', () => {
+              row.classList.remove('opacity-50');
+              row.classList.remove('border-t-blue-500');
+            });
+            row.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              row.classList.add('border-t-blue-500');
+            });
+            row.addEventListener('dragleave', () => {
+              row.classList.remove('border-t-blue-500');
+            });
+            row.addEventListener('drop', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              row.classList.remove('border-t-blue-500');
+              const fromIdx = parseInt(e.dataTransfer!.getData('text/plain'), 10);
+              if (fromIdx === itemIdx || isNaN(fromIdx)) return;
+              const items = itineraryState.days[dayIdx].items;
+              const [moved] = items.splice(fromIdx, 1);
+              const insertAt = fromIdx < itemIdx ? itemIdx - 1 : itemIdx;
+              items.splice(insertAt, 0, moved);
+              manuallyReordered[dayIdx] = true;
+              renderItinerary();
+            });
 
             const emoji = document.createElement('span');
             emoji.className = 'text-base shrink-0';
