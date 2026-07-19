@@ -243,23 +243,17 @@ const complexData = {
 
       <div class="border-t border-[var(--color-border)] pt-4">
         <h3 class="text-sm font-medium mb-2">Add Global POI to Trip</h3>
-        <p class="text-xs text-[var(--color-text-muted)] mb-2">
-          Enter a Global POI ID to add it to this trip. Find POIs in the <a href="/admin/pois" class="text-blue-400 hover:text-blue-300">Global POI Manager</a>.
-        </p>
-        <form id="add-poi-to-trip-form" class="flex gap-2">
+        <div class="relative">
           <input
-            name="poiId"
-            placeholder="POI ID (e.g., abc-123...)"
-            required
-            class="flex-1 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
+            id="poi-search-input"
+            type="text"
+            placeholder="Search POIs by name or city..."
+            autocomplete="off"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500"
           />
-          <button
-            type="submit"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]"
-          >
-            Add to Trip
-          </button>
-        </form>
+          <div id="poi-search-dropdown" class="absolute z-10 left-0 right-0 top-full mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden hidden"></div>
+        </div>
+        <p class="text-xs text-[var(--color-text-muted)] mt-2">Can't find it? Create a new one in the <a href="/admin/pois" class="text-blue-400 hover:text-blue-300">Global POI Manager</a>.</p>
         <p id="add-poi-status" class="text-sm mt-2 hidden"></p>
       </div>
     </div>
@@ -498,43 +492,167 @@ const complexData = {
     });
 
     // --- POIs Tab ---
-    // Add POI to trip
-    const addPoiForm = document.getElementById('add-poi-to-trip-form') as HTMLFormElement;
-    const addPoiStatus = document.getElementById('add-poi-status');
+    const addPoiStatus = document.getElementById('add-poi-status')!;
+    const poiSearchInput = document.getElementById('poi-search-input') as HTMLInputElement;
+    const poiSearchDropdown = document.getElementById('poi-search-dropdown')!;
 
-    addPoiForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = addPoiForm.querySelector('button[type=submit]') as HTMLButtonElement;
-      submitBtn.disabled = true;
-      addPoiStatus?.classList.add('hidden');
+    function escHtml(s: string): string {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
-      const formData = new FormData(addPoiForm);
-      const poiId = formData.get('poiId') as string;
+    function renderPoiCard(poi: any): HTMLDivElement {
+      const card = document.createElement('div');
+      card.className = 'poi-item p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)]';
+      card.dataset.poiId = poi.id;
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="font-medium text-[var(--color-text-primary)]">${escHtml(poi.name)}</h3>
+              <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] capitalize">${escHtml(poi.category ?? '')}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)]">${escHtml(poi.city ?? '')}</span>
+            </div>
+            ${poi.address ? `<p class="text-xs text-[var(--color-text-secondary)]">${escHtml(poi.address)}</p>` : ''}
+            ${poi.advisorNotes ? `<p class="text-xs text-amber-500 mt-1 italic">Global: ${escHtml(poi.advisorNotes)}</p>` : ''}
+          </div>
+          <div class="flex flex-col gap-2">
+            <button type="button" class="edit-trip-poi-btn text-xs text-blue-400 hover:text-blue-300 px-3 py-2 rounded hover:bg-blue-500/10 transition-colors min-h-[44px]" data-poi-id="${escHtml(poi.id)}" data-trip-notes="">Edit Trip Notes</button>
+            <button type="button" class="remove-trip-poi-btn text-xs text-red-400 hover:text-red-300 px-3 py-2 rounded hover:bg-red-500/10 transition-colors min-h-[44px]" data-poi-id="${escHtml(poi.id)}">Remove from Trip</button>
+          </div>
+        </div>
+      `;
+      card.querySelector('.edit-trip-poi-btn')!.addEventListener('click', async () => {
+        const newNotes = prompt('Trip-specific notes (visible to this client):', '');
+        if (newNotes === null) return;
+        try {
+          const res = await fetch(`/api/admin/trips/${tripId}/pois/${poi.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tripAdvisorNotes: newNotes }),
+          });
+          if (res.ok) window.location.reload();
+          else { const d = await res.json() as { error?: string }; alert(d.error || 'Failed to update notes'); }
+        } catch { alert('Network error'); }
+      });
+      card.querySelector('.remove-trip-poi-btn')!.addEventListener('click', async () => {
+        if (!confirm('Remove this POI from the trip?')) return;
+        try {
+          const res = await fetch(`/api/admin/trips/${tripId}/pois/${poi.id}`, { method: 'DELETE' });
+          if (res.ok) card.remove();
+          else { const d = await res.json() as { error?: string }; alert(d.error || 'Failed to remove POI'); }
+        } catch { alert('Network error'); }
+      });
+      return card;
+    }
+
+    async function selectPoi(poi: any) {
+      poiSearchInput.value = '';
+      poiSearchDropdown.classList.add('hidden');
+      addPoiStatus.classList.add('hidden');
 
       try {
         const res = await fetch(`/api/admin/trips/${tripId}/pois`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ poiId }),
+          body: JSON.stringify({ poiId: poi.id }),
         });
-        const data = await res.json();
+        const data = await res.json() as { error?: string };
 
-        if (res.ok) {
-          addPoiStatus.textContent = 'Added! Reloading...';
-          addPoiStatus.className = 'text-sm text-green-400 mt-2';
+        if (res.status === 409) {
+          addPoiStatus.textContent = 'Already added to this trip';
+          addPoiStatus.className = 'text-sm text-amber-400 mt-2';
           addPoiStatus.classList.remove('hidden');
-          window.location.reload();
-        } else {
+          return;
+        }
+        if (!res.ok) {
           addPoiStatus.textContent = data.error || 'Failed to add POI';
           addPoiStatus.className = 'text-sm text-red-400 mt-2';
           addPoiStatus.classList.remove('hidden');
-          submitBtn.disabled = false;
+          return;
         }
+
+        let listEl = document.getElementById('trip-poi-list');
+        if (!listEl) {
+          const emptyEl = panelPois.querySelector(':scope > p');
+          if (emptyEl) emptyEl.remove();
+          listEl = document.createElement('div');
+          listEl.id = 'trip-poi-list';
+          listEl.className = 'space-y-3 mb-6';
+          const borderDiv = panelPois.querySelector('.border-t');
+          panelPois.insertBefore(listEl, borderDiv);
+        }
+        const card = renderPoiCard(poi);
+        listEl.insertBefore(card, listEl.firstChild);
+
+        const poiCount = listEl.querySelectorAll('.poi-item').length;
+        tabPois.textContent = `POIs (${poiCount})`;
+
+        addPoiStatus.textContent = `${poi.name} added.`;
+        addPoiStatus.className = 'text-sm text-green-400 mt-2';
+        addPoiStatus.classList.remove('hidden');
       } catch {
         addPoiStatus.textContent = 'Network error';
         addPoiStatus.className = 'text-sm text-red-400 mt-2';
         addPoiStatus.classList.remove('hidden');
-        submitBtn.disabled = false;
+      }
+    }
+
+    let poiSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function filterPOIs(query: string): any[] {
+      const q = query.toLowerCase();
+      return itineraryState.allGlobalPOIs.filter((p: any) =>
+        p.name.toLowerCase().includes(q) || (p.city ?? '').toLowerCase().includes(q)
+      );
+    }
+
+    function renderDropdown(results: any[], query: string) {
+      poiSearchDropdown.innerHTML = '';
+      if (results.length === 0) {
+        const msg = document.createElement('div');
+        msg.className = 'px-3 py-2 text-sm text-[var(--color-text-muted)]';
+        msg.textContent = `No POIs matching "${query}"`;
+        poiSearchDropdown.appendChild(msg);
+      } else {
+        results.forEach((poi: any) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-subtle)] transition-colors min-h-[44px]';
+          row.innerHTML = `
+            <span class="flex-1 text-sm text-[var(--color-text-primary)] truncate">${escHtml(poi.name)}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] shrink-0">${escHtml(poi.city ?? '')}</span>
+            <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] capitalize shrink-0">${escHtml(poi.category ?? '')}</span>
+          `;
+          row.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            selectPoi(poi);
+          });
+          poiSearchDropdown.appendChild(row);
+        });
+      }
+      poiSearchDropdown.classList.remove('hidden');
+    }
+
+    poiSearchInput.addEventListener('input', () => {
+      const query = poiSearchInput.value.trim();
+      if (poiSearchTimer) clearTimeout(poiSearchTimer);
+      if (!query) {
+        poiSearchDropdown.classList.add('hidden');
+        return;
+      }
+      poiSearchTimer = setTimeout(() => {
+        renderDropdown(filterPOIs(query), query);
+      }, 300);
+    });
+
+    poiSearchInput.addEventListener('blur', () => {
+      setTimeout(() => poiSearchDropdown.classList.add('hidden'), 150);
+    });
+
+    poiSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        poiSearchDropdown.classList.add('hidden');
+        poiSearchInput.blur();
       }
     });
 
