@@ -114,10 +114,9 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
   <script>
     const form = document.getElementById('new-poi-form') as HTMLFormElement;
     const formStatus = document.getElementById('form-status')!;
+    const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
+    async function doCreate(force: boolean) {
       submitBtn.disabled = true;
       formStatus.classList.add('hidden');
 
@@ -129,13 +128,21 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
       try {
         const res = await fetch('/api/admin/pois', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Force-Create': force ? '1' : '0',
+          },
           body: JSON.stringify(payload),
         });
         const data = await res.json();
 
         if (res.ok) {
           window.location.href = '/admin/pois';
+        } else if (res.status === 409 && data.error === 'duplicate') {
+          submitBtn.disabled = false;
+          if (confirm(data.message)) {
+            await doCreate(true);
+          }
         } else {
           formStatus.textContent = data.error || 'Failed to create POI';
           formStatus.className = 'text-sm text-red-400';
@@ -148,6 +155,11 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
         formStatus.classList.remove('hidden');
         submitBtn.disabled = false;
       }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      doCreate(false);
     });
   </script>
 </TripLayout>
