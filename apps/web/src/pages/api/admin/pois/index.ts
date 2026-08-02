@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request }) => {
         JSON.stringify({
           error: 'duplicate',
           existing: { id: duplicate.id, name: duplicate.name, city: duplicate.city },
-          message: `A POI named '${duplicate.name}' already exists in '${duplicate.city}'. Create duplicate anyway?`,
+          message: `A POI named '${duplicate.name}' already exists in '${duplicate.city}'.`,
         }),
         { status: 409, headers: { 'Content-Type': 'application/json' } }
       );

@@ -468,6 +468,32 @@ const complexData = {
       });
     }
 
+    function showReopenModal(originalStatus: string, newStatus: string): Promise<{ proceed: boolean }> {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+        const modal = document.createElement('div');
+        modal.className = 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6 max-w-sm w-full';
+        modal.innerHTML = `
+          <h3 class="text-sm font-semibold mb-3">Reopen trip?</h3>
+          <p class="text-xs text-[var(--color-text-secondary)] mb-4">This will change the status from ${originalStatus} to ${newStatus} and clear the closed/lost reason.</p>
+          <div class="flex gap-3">
+            <button type="button" id="reopen-modal-cancel" class="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm hover:bg-[var(--color-bg-subtle)] transition-colors min-h-[44px]">Cancel</button>
+            <button type="button" id="reopen-modal-confirm" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors min-h-[44px]">Confirm</button>
+          </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        const close = (result: { proceed: boolean }) => {
+          document.body.removeChild(overlay);
+          resolve(result);
+        };
+        modal.querySelector('#reopen-modal-cancel')!.addEventListener('click', () => close({ proceed: false }));
+        modal.querySelector('#reopen-modal-confirm')!.addEventListener('click', () => close({ proceed: true }));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close({ proceed: false }); });
+      });
+    }
+
     async function gateStatusChange(fd: FormData): Promise<{ proceed: boolean; statusReason?: string }> {
       const newStatus = fd.get('status') as string;
       const originalStatus = fd.get('originalStatus') as string;
@@ -475,9 +501,8 @@ const complexData = {
       if (!newStatus || !originalStatus || newStatus === originalStatus) return { proceed: true, statusReason: originalReason };
       if (TERMINAL_STATUSES.includes(newStatus)) return showStatusReasonModal(newStatus);
       if (TERMINAL_STATUSES.includes(originalStatus)) {
-        const ok = confirm(`This will reopen the trip from ${originalStatus} to ${newStatus}. Continue?`);
-        // Regressive/reopen: clear the stale terminal status reason.
-        return { proceed: ok, statusReason: undefined };
+        const result = await showReopenModal(originalStatus, newStatus);
+        return { proceed: result.proceed, statusReason: undefined };
       }
       // Simple non-terminal change: keep the existing reason.
       return { proceed: true, statusReason: originalReason };
