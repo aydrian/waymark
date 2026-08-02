@@ -9,7 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "deploy": "astro build && wrangler deploy --config dist/server/wrangler.json",
+    "deploy": "astro build && node -e \"const fs=require('fs');const p='dist/server/wrangler.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));delete j.legacy_env;fs.writeFileSync(p,JSON.stringify(j));\" && wrangler deploy --config dist/server/wrangler.json",
     "sync:kv": "bun scripts/sync-kv.ts"
   },
   "dependencies": {
