@@ -193,7 +193,7 @@ export const MapConfigSchema = z.object({
   centerLat: z.number().optional(),
   centerLng: z.number().optional(),
   zoom: z.number().optional(),
-}).optional();
+}).nullish();
 
 export const ItinerarySchema = z.object({
   id: z.string().regex(/^[a-z0-9]{8}$/, 'id must be 8 lowercase alphanumeric chars'),
