@@ -407,6 +407,16 @@ const complexData = {
       return `Validation failed — ${parts.join('; ')}`;
     }
 
+    function setBtnLoading(btn: HTMLButtonElement, loading: boolean, label: string) {
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin align-middle mr-1"></span>Saving…';
+      } else {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    }
+
     // --- Info form save ---
     async function saveTrip(payload: unknown) {
       const res = await fetch('/api/admin/trips/upsert', {
@@ -426,13 +436,14 @@ const complexData = {
         overlay.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
         const modal = document.createElement('div');
         modal.className = 'bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6 max-w-sm w-full';
+        const reasonPlaceholder = newStatus === 'completed' ? 'e.g., Trip delivered and closed out' : 'e.g., Client went with another advisor';
         const label = newStatus === 'completed' ? 'Completed' : 'Closed — Lost';
         modal.innerHTML = `
           <h3 class="text-sm font-semibold mb-3">Mark as ${label}?</h3>
           <p class="text-xs text-[var(--color-text-secondary)] mb-3">Optionally provide a reason for this status change.</p>
           <div class="mb-4">
             <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Reason (optional)</label>
-            <input id="status-reason-input" type="text" placeholder="e.g., Pregnancy complications"
+            <input id="status-reason-input" type="text" placeholder="${reasonPlaceholder}"
               class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500" />
           </div>
           <div class="flex gap-3">
@@ -478,7 +489,7 @@ const complexData = {
       e.preventDefault();
       const fd = new FormData(infoForm);
       const submitBtn = infoForm.querySelector('button[type=submit]') as HTMLButtonElement;
-      submitBtn.disabled = true;
+      setBtnLoading(submitBtn, true, 'Save changes');
 
       const pin = fd.get('pin') as string;
       let mapConfig: unknown = null;
@@ -487,7 +498,7 @@ const complexData = {
 
       const gate = await gateStatusChange(fd);
       if (!gate.proceed) {
-        submitBtn.disabled = false;
+        setBtnLoading(submitBtn, false, 'Save changes');
         return;
       }
 
@@ -520,26 +531,27 @@ const complexData = {
         const data = await saveTrip(payload) as { ok?: boolean; error?: string; issues?: Array<{ path: (string | number)[]; message: string }> };
         if (data.ok) {
           showToast('Saved.', 'success');
+          (document.querySelector('input[name="originalStatus"]') as HTMLInputElement).value = payload.status as string;
         } else {
           showToast(data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed'), 'error');
         }
       } catch {
         showToast('Network error', 'error');
       }
-      submitBtn.disabled = false;
+      setBtnLoading(submitBtn, false, 'Save changes');
     });
 
     // --- Raw JSON save ---
     const rawSaveBtn = document.getElementById('raw-save-btn') as HTMLButtonElement;
 
     rawSaveBtn.addEventListener('click', async () => {
-      rawSaveBtn.disabled = true;
+      setBtnLoading(rawSaveBtn, true, 'Save JSON');
       let parsed;
       try {
         parsed = JSON.parse(rawEditor.state.doc.toString());
       } catch {
         showToast('Invalid JSON — fix syntax errors before saving.', 'error');
-        rawSaveBtn.disabled = false;
+        setBtnLoading(rawSaveBtn, false, 'Save JSON');
         return;
       }
       try {
@@ -559,7 +571,7 @@ const complexData = {
       } catch {
         showToast('Network error', 'error');
       }
-      rawSaveBtn.disabled = false;
+      setBtnLoading(rawSaveBtn, false, 'Save JSON');
     });
 
     // --- POIs Tab ---

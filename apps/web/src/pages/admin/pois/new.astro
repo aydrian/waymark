@@ -112,6 +112,7 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
   </div>
 
   <script>
+    import { showToast } from '../../../lib/toast.js';
     const form = document.getElementById('new-poi-form') as HTMLFormElement;
     const formStatus = document.getElementById('form-status')!;
     const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
@@ -139,10 +140,8 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
         if (res.ok) {
           window.location.href = '/admin/pois';
         } else if (res.status === 409 && data.error === 'duplicate') {
+          showToast(data.message, 'warn');
           submitBtn.disabled = false;
-          if (confirm(data.message)) {
-            await doCreate(true);
-          }
         } else {
           formStatus.textContent = data.error || 'Failed to create POI';
           formStatus.className = 'text-sm text-red-400';
