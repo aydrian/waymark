@@ -218,6 +218,7 @@ const complexData = {
                     type="button"
                     class="edit-trip-poi-btn text-xs text-blue-400 hover:text-blue-300 px-3 py-2 rounded hover:bg-blue-500/10 transition-colors min-h-[44px]"
                     data-poi-id={poi.id}
+                    data-poi-name={poi.name}
                     data-trip-notes={poi.tripAdvisorNotes || ''}
                   >
                     Edit Trip Notes
@@ -276,6 +277,34 @@ const complexData = {
       </div>
     </div>
   </main>
+
+  <!-- Edit Trip POI Notes Modal -->
+  <div id="edit-trip-notes-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-6 max-w-lg w-full">
+      <div class="flex items-center gap-2 mb-4">
+        <h3 id="edit-trip-notes-title" class="text-sm font-semibold"></h3>
+        <span id="edit-trip-notes-category" class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] capitalize"></span>
+      </div>
+      <div class="mb-4">
+        <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Trip Notes</label>
+        <textarea
+          id="edit-trip-notes-textarea"
+          rows="4"
+          class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 resize-none"
+          placeholder="Trip-specific notes visible to this client..."
+        ></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button type="button" id="edit-trip-notes-cancel" class="flex-1 px-4 py-2 border border-[var(--color-border)] rounded-lg text-sm hover:bg-[var(--color-bg-subtle)] transition-colors min-h-[44px]">
+          Cancel
+        </button>
+        <button type="button" id="edit-trip-notes-save" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors min-h-[44px]">
+          Save Changes
+        </button>
+      </div>
+      <p id="edit-trip-notes-status" class="text-sm mt-3 hidden"></p>
+    </div>
+  </div>
 
   <!-- Pass server data to client via data attributes (define:vars disables ES module bundling) -->
   <div
@@ -496,6 +525,71 @@ const complexData = {
     const poiSearchInput = document.getElementById('poi-search-input') as HTMLInputElement;
     const poiSearchDropdown = document.getElementById('poi-search-dropdown')!;
 
+    let currentEditingPoi: { id: string; name: string; category: string; currentNotes: string } | null = null;
+
+    const editNotesModal = document.getElementById('edit-trip-notes-modal')!;
+    const editNotesTitleEl = document.getElementById('edit-trip-notes-title')!;
+    const editNotesCategoryEl = document.getElementById('edit-trip-notes-category')!;
+    const editNotesTextarea = document.getElementById('edit-trip-notes-textarea') as HTMLTextAreaElement;
+    const editNotesSaveBtn = document.getElementById('edit-trip-notes-save') as HTMLButtonElement;
+    const editNotesCancelBtn = document.getElementById('edit-trip-notes-cancel')!;
+    const editNotesStatus = document.getElementById('edit-trip-notes-status')!;
+
+    function openTripNotesModal(poiId: string, poiName: string, poiCategory: string, currentNotes: string) {
+      currentEditingPoi = { id: poiId, name: poiName, category: poiCategory, currentNotes };
+      editNotesTitleEl.textContent = poiName;
+      editNotesCategoryEl.textContent = poiCategory;
+      editNotesTextarea.value = currentNotes;
+      editNotesStatus.classList.add('hidden');
+      editNotesStatus.textContent = '';
+      editNotesSaveBtn.disabled = false;
+      editNotesModal.classList.remove('hidden');
+      editNotesTextarea.focus();
+    }
+
+    function closeTripNotesModal() {
+      editNotesModal.classList.add('hidden');
+      currentEditingPoi = null;
+    }
+
+    editNotesCancelBtn.addEventListener('click', closeTripNotesModal);
+
+    editNotesModal.addEventListener('click', (e) => {
+      if (e.target === editNotesModal) closeTripNotesModal();
+    });
+
+    editNotesSaveBtn.addEventListener('click', async () => {
+      if (!currentEditingPoi) return;
+      const notes = editNotesTextarea.value;
+      editNotesSaveBtn.disabled = true;
+      editNotesStatus.classList.add('hidden');
+
+      try {
+        const res = await fetch(`/api/admin/trips/${tripId}/pois/${currentEditingPoi.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tripAdvisorNotes: notes }),
+        });
+        if (res.ok) {
+          editNotesStatus.textContent = 'Saved!';
+          editNotesStatus.className = 'text-sm mt-3 text-green-400';
+          editNotesStatus.classList.remove('hidden');
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          const data = await res.json() as { error?: string };
+          editNotesStatus.textContent = data.error || 'Failed to update notes';
+          editNotesStatus.className = 'text-sm mt-3 text-red-400';
+          editNotesStatus.classList.remove('hidden');
+          editNotesSaveBtn.disabled = false;
+        }
+      } catch {
+        editNotesStatus.textContent = 'Network error';
+        editNotesStatus.className = 'text-sm mt-3 text-red-400';
+        editNotesStatus.classList.remove('hidden');
+        editNotesSaveBtn.disabled = false;
+      }
+    });
+
     function escHtml(s: string): string {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
@@ -521,18 +615,8 @@ const complexData = {
           </div>
         </div>
       `;
-      card.querySelector('.edit-trip-poi-btn')!.addEventListener('click', async () => {
-        const newNotes = prompt('Trip-specific notes (visible to this client):', '');
-        if (newNotes === null) return;
-        try {
-          const res = await fetch(`/api/admin/trips/${tripId}/pois/${poi.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tripAdvisorNotes: newNotes }),
-          });
-          if (res.ok) window.location.reload();
-          else { const d = await res.json() as { error?: string }; alert(d.error || 'Failed to update notes'); }
-        } catch { alert('Network error'); }
+      card.querySelector('.edit-trip-poi-btn')!.addEventListener('click', () => {
+        openTripNotesModal(poi.id, poi.name, poi.category ?? '', '');
       });
       card.querySelector('.remove-trip-poi-btn')!.addEventListener('click', async () => {
         if (!confirm('Remove this POI from the trip?')) return;
@@ -658,29 +742,11 @@ const complexData = {
 
     // Edit trip notes
     document.querySelectorAll('.edit-trip-poi-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const poiId = btn.getAttribute('data-poi-id');
-        const currentNotes = btn.getAttribute('data-trip-notes');
-        const newNotes = prompt('Trip-specific notes (visible to this client):', currentNotes || '');
-
-        if (newNotes === null) return; // Cancelled
-
-        try {
-          const res = await fetch(`/api/admin/trips/${tripId}/pois/${poiId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tripAdvisorNotes: newNotes }),
-          });
-
-          if (res.ok) {
-            window.location.reload();
-          } else {
-            const data = await res.json();
-            alert(data.error || 'Failed to update notes');
-          }
-        } catch {
-          alert('Network error');
-        }
+      btn.addEventListener('click', () => {
+        const poiId = btn.getAttribute('data-poi-id')!;
+        const poiName = btn.getAttribute('data-poi-name') || poiId;
+        const currentNotes = btn.getAttribute('data-trip-notes') || '';
+        openTripNotesModal(poiId, poiName, '', currentNotes);
       });
     });
 
