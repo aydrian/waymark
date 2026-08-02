@@ -396,6 +396,39 @@ const complexData = {
       parent: document.getElementById('raw-editor')!,
     });
 
+    // --- Section-level persist helpers ---
+    function refreshRawEditor(trip: any) {
+      const content = JSON.stringify(trip, null, 2);
+      const len = rawEditor.state.doc.toString().length;
+      rawEditor.dispatch({ changes: { from: 0, to: len, insert: content } });
+    }
+
+    async function persistSection(sectionKey: string, value: unknown): Promise<boolean> {
+      try {
+        const getRes = await fetch('/api/admin/trips/' + tripId, { credentials: 'same-origin' });
+        if (!getRes.ok) { showToast('Save failed — could not fetch latest trip', 'error'); return false; }
+        const fetched = await getRes.json() as any;
+        const payload = { ...fetched, [sectionKey]: value, updatedAt: new Date().toISOString() };
+        const postRes = await fetch('/api/admin/trips/upsert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin',
+        });
+        const data = await postRes.json() as { ok?: boolean; error?: string; issues?: Array<{ path: (string | number)[]; message: string }> };
+        if (data.ok) {
+          refreshRawEditor(payload);
+          showToast('Saved.', 'success');
+          return true;
+        }
+        showToast(data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed'), 'error');
+        return false;
+      } catch {
+        showToast('Network error', 'error');
+        return false;
+      }
+    }
+
     // --- Helpers ---
     function formatIssues(issues: Array<{ path: (string | number)[]; message: string }>): string {
       if (!issues.length) return 'Validation failed';
@@ -557,6 +590,7 @@ const complexData = {
         if (data.ok) {
           showToast('Saved.', 'success');
           (document.querySelector('input[name="originalStatus"]') as HTMLInputElement).value = payload.status as string;
+          refreshRawEditor(payload);
         } else {
           showToast(data.issues ? formatIssues(data.issues) : (data.error ?? 'Save failed'), 'error');
         }
@@ -879,6 +913,7 @@ const complexData = {
       const n = days.length + 1;
       days.push({ dayNumber: n, date: nextDate, title: `Day ${n}`, items: [] });
       renderItinerary();
+      persistSection('days', itineraryState.days);
     }
 
     function removeDay(idx: number) {
@@ -886,6 +921,7 @@ const complexData = {
       itineraryState.days.splice(idx, 1);
       itineraryState.days.forEach((d, i) => { d.dayNumber = i + 1; });
       renderItinerary();
+      persistSection('days', itineraryState.days);
     }
 
     function moveDay(idx: number, dir: -1 | 1) {
@@ -895,6 +931,7 @@ const complexData = {
       [days[idx], days[target]] = [days[target], days[idx]];
       days.forEach((d, i) => { d.dayNumber = i + 1; });
       renderItinerary();
+      persistSection('days', itineraryState.days);
     }
 
     function moveItem(dayIdx: number, itemIdx: number, dir: -1 | 1) {
@@ -904,12 +941,14 @@ const complexData = {
       [items[itemIdx], items[target]] = [items[target], items[itemIdx]];
       manuallyReordered[dayIdx] = true;
       renderItinerary();
+      persistSection('days', itineraryState.days);
     }
 
     function removeItem(dayIdx: number, itemIdx: number) {
       if (!confirm('Delete this item?')) return;
       itineraryState.days[dayIdx].items.splice(itemIdx, 1);
       renderItinerary();
+      persistSection('days', itineraryState.days);
     }
 
     // Modal for adding/editing items
@@ -995,6 +1034,7 @@ const complexData = {
         }
         document.body.removeChild(overlay);
         renderItinerary();
+        persistSection('days', itineraryState.days);
       });
     }
 
@@ -1043,6 +1083,7 @@ const complexData = {
         itineraryState.days[dayIdx].notes = newNotes || undefined;
         document.body.removeChild(overlay);
         renderItinerary();
+        persistSection('days', itineraryState.days);
       });
     }
 
@@ -1092,6 +1133,7 @@ const complexData = {
           days.splice(insertAt, 0, moved);
           days.forEach((d, i) => { d.dayNumber = i + 1; });
           renderItinerary();
+          persistSection('days', itineraryState.days);
         });
         return zone;
       }
@@ -1122,6 +1164,7 @@ const complexData = {
           items.splice(insertAt, 0, moved);
           manuallyReordered[dayIdx] = true;
           renderItinerary();
+          persistSection('days', itineraryState.days);
         });
         return zone;
       }
@@ -1393,6 +1436,7 @@ const complexData = {
         }
         document.body.removeChild(overlay);
         renderHotels();
+        persistSection('stays', logisticsState.stays);
       });
     }
 
@@ -1445,6 +1489,7 @@ const complexData = {
           if (!confirm('Remove this hotel stay?')) return;
           logisticsState.stays.splice(stayIdx, 1);
           renderHotels();
+          persistSection('stays', logisticsState.stays);
         });
 
         container.appendChild(card);
@@ -1553,6 +1598,7 @@ const complexData = {
         }
         document.body.removeChild(overlay);
         renderTransport();
+        persistSection('transportLegs', logisticsState.transportLegs);
       });
     }
 
@@ -1606,6 +1652,7 @@ const complexData = {
           if (!confirm('Remove this transport leg?')) return;
           logisticsState.transportLegs.splice(legIdx, 1);
           renderTransport();
+          persistSection('transportLegs', logisticsState.transportLegs);
         });
 
         container.appendChild(card);
@@ -1713,6 +1760,7 @@ const complexData = {
         }
         document.body.removeChild(overlay);
         renderRentalCars();
+        persistSection('rentalCars', logisticsState.rentalCars);
       });
     }
 
@@ -1765,6 +1813,7 @@ const complexData = {
           if (!confirm('Remove this rental car?')) return;
           logisticsState.rentalCars.splice(carIdx, 1);
           renderRentalCars();
+          persistSection('rentalCars', logisticsState.rentalCars);
         });
 
         container.appendChild(card);
