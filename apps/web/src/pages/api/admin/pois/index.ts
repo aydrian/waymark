@@ -45,6 +45,27 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
+  const forceCreate = request.headers.get('X-Force-Create') === '1';
+
+  if (!forceCreate) {
+    const existing = await listGlobalPOIs(env.TRIPS);
+    const duplicate = existing.find(
+      p =>
+        p.name.toLowerCase() === result.data.name.toLowerCase() &&
+        p.city.toLowerCase() === result.data.city.toLowerCase()
+    );
+    if (duplicate) {
+      return new Response(
+        JSON.stringify({
+          error: 'duplicate',
+          existing: { id: duplicate.id, name: duplicate.name, city: duplicate.city },
+          message: `A POI named '${duplicate.name}' already exists in '${duplicate.city}'.`,
+        }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
   const now = new Date().toISOString();
   const poi = {
     ...result.data,

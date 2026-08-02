@@ -2,6 +2,7 @@
 import { env } from 'cloudflare:workers';
 import { requireAdminSession } from '../../../lib/admin-auth.js';
 import TripLayout from '../../../layouts/TripLayout.astro';
+import AdminNavbar from '../../../components/AdminNavbar.astro';
 
 const redirect = await requireAdminSession(Astro.request, env.COOKIE_SIGNING_SECRET);
 if (redirect) return redirect;
@@ -31,18 +32,11 @@ const emptyComplexData = {
 };
 ---
 <TripLayout title="Admin — New Trip">
+  <AdminNavbar currentPage="trips" />
   <div class="max-w-2xl mx-auto px-4 py-10">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <a href="/admin/trips" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-          ← Trips
-        </a>
-        <h1 class="text-xl font-bold">New Trip</h1>
-        <span class="font-mono text-xs text-[var(--color-text-secondary)]">{newId}</span>
-      </div>
-      <form method="POST" action="/api/admin/auth/logout">
-        <button type="submit" class="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Log out</button>
-      </form>
+    <div class="flex items-center gap-3 mb-6">
+      <h1 class="text-xl font-bold">New Trip</h1>
+      <span class="font-mono text-xs text-[var(--color-text-secondary)]">{newId}</span>
     </div>
 
     <form id="new-trip-form" class="flex flex-col gap-4">
