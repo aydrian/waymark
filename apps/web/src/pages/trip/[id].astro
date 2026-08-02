@@ -124,23 +124,44 @@ const getCurrency = (currency: string | undefined | null) => (currency && curren
     });
   });
 
-// Travel: from transport legs
-(trip.transportLegs ?? [])
-  .filter(l => l.cost != null)
-  .forEach(l => {
+// Travel: from transport legs, grouped by confirmationNumber
+{
+  const legs = trip.transportLegs ?? [];
+  // Build ordered groups: keyed by confirmationNumber (non-empty) or leg id (singleton)
+  const groupMap = new Map<string, typeof legs>();
+  for (const leg of legs) {
+    const key = leg.confirmationNumber?.trim() ? leg.confirmationNumber.trim() : `__singleton_${leg.id}`;
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key)!.push(leg);
+  }
+  for (const group of groupMap.values()) {
+    const totalCost = group.reduce((sum, l) => sum + (l.cost ?? 0), 0);
+    const hasAnyCost = group.some(l => l.cost != null);
+    if (!hasAnyCost) continue;
+
+    const first = group[0];
+    const title = group.length > 1
+      ? group.map(l => l.title).join(' + ')
+      : first.title;
+
+    const departureDates = group.map(l => l.departureDate).sort();
+    const arrivalDates = group.map(l => l.arrivalDate).sort();
+    const minDep = departureDates[0];
+    const maxArr = arrivalDates[arrivalDates.length - 1];
+    const dateRange = minDep === maxArr ? minDep : `${minDep} – ${maxArr}`;
+
     rawExpenses.push({
-      id: l.id,
-      title: l.title,
-      status: l.status,
-      amount: l.cost!,
-      currency: getCurrency(l.costCurrency),
-      dateRange: l.departureDate === l.arrivalDate
-        ? l.departureDate
-        : `${l.departureDate} – ${l.arrivalDate}`,
-      vendor: l.vendor,
+      id: first.id,
+      title,
+      status: first.status,
+      amount: totalCost,
+      currency: getCurrency(first.costCurrency),
+      dateRange,
+      vendor: first.vendor,
       category: 'travel',
     });
-  });
+  }
+}
 
 // Rental Cars
 (trip.rentalCars ?? [])
