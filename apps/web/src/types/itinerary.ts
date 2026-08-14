@@ -168,6 +168,7 @@ export const TripItemBaseSchema = z.object({
   address: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
+  googleMapsUrl: z.string().url().optional(),
   vendor: z.string().optional(),
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
