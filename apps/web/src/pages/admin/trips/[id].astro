@@ -317,6 +317,7 @@ const complexData = {
     import { EditorView, basicSetup } from 'codemirror';
     import { json } from '@codemirror/lang-json';
     import { showToast } from '../../../lib/toast.js';
+    import { parseGoogleMapsUrl } from '../../../lib/maps-url.js';
 
     const dataEl = document.getElementById('trip-data')!;
     const complexData = JSON.parse(dataEl.dataset.complex!);
@@ -968,6 +969,9 @@ const complexData = {
         { key: 'endTime', label: 'End Time', kind: 'time', def: '' },
         { key: 'location', label: 'Location', kind: 'text', def: '' },
         { key: 'address', label: 'Address', kind: 'text', def: '' },
+        { key: 'lat', label: 'Latitude', kind: 'number', def: '' },
+        { key: 'lng', label: 'Longitude', kind: 'number', def: '' },
+        { key: 'googleMapsUrl', label: 'Google Maps URL', kind: 'url', def: '' },
         { key: 'vendor', label: 'Vendor', kind: 'text', def: '' },
         { key: 'confirmationNumber', label: 'Confirmation #', kind: 'text', def: '' },
         { key: 'cost', label: 'Cost', kind: 'number', def: '' },
@@ -1008,6 +1012,32 @@ const complexData = {
 
       overlay.appendChild(modal);
       document.body.appendChild(overlay);
+
+      const itemMapsUrlInput = modal.querySelector<HTMLInputElement>('[name="googleMapsUrl"]')!;
+      const itemMapsUrlStatus = document.createElement('p');
+      itemMapsUrlStatus.className = 'hidden text-xs mt-1';
+      itemMapsUrlInput.parentElement!.appendChild(itemMapsUrlStatus);
+
+      itemMapsUrlInput.addEventListener('blur', async () => {
+        const url = itemMapsUrlInput.value.trim();
+        if (!url) { itemMapsUrlStatus.className = 'hidden text-xs mt-1'; return; }
+        const result = await parseGoogleMapsUrl(url);
+        if (result) {
+          (modal.querySelector<HTMLInputElement>('[name="lat"]')!).value = String(result.lat);
+          (modal.querySelector<HTMLInputElement>('[name="lng"]')!).value = String(result.lng);
+          const titleInput = modal.querySelector<HTMLInputElement>('[name="title"]')!;
+          if (result.nameSlug && !titleInput.value.trim()) titleInput.value = result.nameSlug;
+          itemMapsUrlStatus.textContent = '✓ Coordinates found';
+          itemMapsUrlStatus.className = 'text-xs mt-1 text-green-400';
+        } else {
+          itemMapsUrlStatus.textContent = "Couldn't parse that Maps link";
+          itemMapsUrlStatus.className = 'text-xs mt-1 text-amber-400';
+        }
+      });
+
+      itemMapsUrlInput.addEventListener('input', () => {
+        itemMapsUrlStatus.className = 'hidden text-xs mt-1';
+      });
 
       overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
       modal.querySelector('#modal-cancel')!.addEventListener('click', () => document.body.removeChild(overlay));
@@ -1406,6 +1436,32 @@ const complexData = {
 
       overlay.appendChild(modal);
       document.body.appendChild(overlay);
+
+      const hotelMapsUrlInput = modal.querySelector<HTMLInputElement>('[name="googleMapsUrl"]')!;
+      const hotelMapsUrlStatus = document.createElement('p');
+      hotelMapsUrlStatus.className = 'hidden text-xs mt-1';
+      hotelMapsUrlInput.parentElement!.appendChild(hotelMapsUrlStatus);
+
+      hotelMapsUrlInput.addEventListener('blur', async () => {
+        const url = hotelMapsUrlInput.value.trim();
+        if (!url) { hotelMapsUrlStatus.className = 'hidden text-xs mt-1'; return; }
+        const result = await parseGoogleMapsUrl(url);
+        if (result) {
+          (modal.querySelector<HTMLInputElement>('[name="lat"]')!).value = String(result.lat);
+          (modal.querySelector<HTMLInputElement>('[name="lng"]')!).value = String(result.lng);
+          const titleInput = modal.querySelector<HTMLInputElement>('[name="title"]')!;
+          if (result.nameSlug && !titleInput.value.trim()) titleInput.value = result.nameSlug;
+          hotelMapsUrlStatus.textContent = '✓ Coordinates found';
+          hotelMapsUrlStatus.className = 'text-xs mt-1 text-green-400';
+        } else {
+          hotelMapsUrlStatus.textContent = "Couldn't parse that Maps link";
+          hotelMapsUrlStatus.className = 'text-xs mt-1 text-amber-400';
+        }
+      });
+
+      hotelMapsUrlInput.addEventListener('input', () => {
+        hotelMapsUrlStatus.className = 'hidden text-xs mt-1';
+      });
 
       overlay.addEventListener('click', (e) => { if (e.target === overlay) document.body.removeChild(overlay); });
       modal.querySelector('#hotel-modal-cancel')!.addEventListener('click', () => document.body.removeChild(overlay));
