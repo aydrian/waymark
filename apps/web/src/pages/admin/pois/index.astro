@@ -165,12 +165,23 @@ const categories = [...new Set(pois.map(p => p.category))].sort();
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Latitude</label>
+            <input name="lat" type="number" step="any" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Longitude</label>
+            <input name="lng" type="number" step="any" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
             <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Website</label>
             <input name="website" type="url" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:outline-none focus:border-blue-500" />
           </div>
           <div>
             <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">Google Maps URL</label>
             <input name="googleMapsUrl" type="url" class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:outline-none focus:border-blue-500" />
+            <p id="edit-maps-url-status" class="hidden text-xs mt-1"></p>
           </div>
         </div>
         <div>
@@ -195,6 +206,7 @@ const categories = [...new Set(pois.map(p => p.category))].sort();
   </div>
 
   <script>
+    import { parseGoogleMapsUrl } from '../../../lib/maps-url.js';
     // Filters
     const cityFilter = document.getElementById('city-filter') as HTMLSelectElement;
     const categoryFilter = document.getElementById('category-filter') as HTMLSelectElement;
@@ -261,6 +273,29 @@ const categories = [...new Set(pois.map(p => p.category))].sort();
     const editForm = document.getElementById('edit-poi-form') as HTMLFormElement;
     const editCancel = document.getElementById('edit-cancel');
     const editError = document.getElementById('edit-error');
+    const editMapsUrlStatus = document.getElementById('edit-maps-url-status')!;
+    const editMapsUrlInput = editForm.querySelector<HTMLInputElement>('[name="googleMapsUrl"]')!;
+
+    editMapsUrlInput.addEventListener('blur', async () => {
+      const url = editMapsUrlInput.value.trim();
+      if (!url) { editMapsUrlStatus.className = 'hidden text-xs mt-1'; return; }
+      const result = await parseGoogleMapsUrl(url);
+      if (result) {
+        (editForm.elements.namedItem('lat') as HTMLInputElement).value = String(result.lat);
+        (editForm.elements.namedItem('lng') as HTMLInputElement).value = String(result.lng);
+        const nameInput = editForm.elements.namedItem('name') as HTMLInputElement;
+        if (result.nameSlug && !nameInput.value.trim()) nameInput.value = result.nameSlug;
+        editMapsUrlStatus.textContent = '✓ Coordinates found';
+        editMapsUrlStatus.className = 'text-xs mt-1 text-green-400';
+      } else {
+        editMapsUrlStatus.textContent = "Couldn't parse that Maps link";
+        editMapsUrlStatus.className = 'text-xs mt-1 text-amber-400';
+      }
+    });
+
+    editMapsUrlInput.addEventListener('input', () => {
+      editMapsUrlStatus.className = 'hidden text-xs mt-1';
+    });
 
     document.querySelectorAll('.edit-poi-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -270,10 +305,13 @@ const categories = [...new Set(pois.map(p => p.category))].sort();
         (editForm.elements.namedItem('city') as HTMLInputElement).value = poi.city;
         (editForm.elements.namedItem('category') as HTMLSelectElement).value = poi.category;
         (editForm.elements.namedItem('address') as HTMLInputElement).value = poi.address || '';
+        (editForm.elements.namedItem('lat') as HTMLInputElement).value = poi.lat != null ? String(poi.lat) : '';
+        (editForm.elements.namedItem('lng') as HTMLInputElement).value = poi.lng != null ? String(poi.lng) : '';
         (editForm.elements.namedItem('website') as HTMLInputElement).value = poi.website || '';
         (editForm.elements.namedItem('googleMapsUrl') as HTMLInputElement).value = poi.googleMapsUrl || '';
         (editForm.elements.namedItem('description') as HTMLTextAreaElement).value = poi.description || '';
         (editForm.elements.namedItem('advisorNotes') as HTMLTextAreaElement).value = poi.advisorNotes || '';
+        editMapsUrlStatus.className = 'hidden text-xs mt-1';
 
         editError?.classList.add('hidden');
         editModal?.classList.remove('hidden');

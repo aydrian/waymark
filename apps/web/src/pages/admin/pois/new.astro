@@ -67,6 +67,25 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            Latitude
+          </label>
+          <input name="lat" type="number" step="any"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
+            placeholder="48.8584" />
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
+            Longitude
+          </label>
+          <input name="lng" type="number" step="any"
+            class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
+            placeholder="2.2945" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[var(--color-text-secondary)] mb-1">
             Website
           </label>
           <input name="website" type="url"
@@ -80,6 +99,7 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
           <input name="googleMapsUrl" type="url"
             class="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm focus:outline-none focus:border-blue-500 min-h-[44px]"
             placeholder="https://maps.google.com/..." />
+          <p id="maps-url-status" class="hidden text-xs mt-1"></p>
         </div>
       </div>
 
@@ -113,6 +133,7 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
 
   <script>
     import { showToast } from '../../../lib/toast.js';
+    import { parseGoogleMapsUrl } from '../../../lib/maps-url.js';
     const form = document.getElementById('new-poi-form') as HTMLFormElement;
     const formStatus = document.getElementById('form-status')!;
     const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
@@ -159,6 +180,30 @@ const cities = [...new Set(pois.map(p => p.city))].sort();
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       doCreate(false);
+    });
+
+    const mapsUrlInput = form.querySelector<HTMLInputElement>('[name="googleMapsUrl"]')!;
+    const mapsUrlStatus = document.getElementById('maps-url-status')!;
+
+    mapsUrlInput.addEventListener('blur', async () => {
+      const url = mapsUrlInput.value.trim();
+      if (!url) { mapsUrlStatus.className = 'hidden text-xs mt-1'; return; }
+      const result = await parseGoogleMapsUrl(url);
+      if (result) {
+        (form.querySelector<HTMLInputElement>('[name="lat"]')!).value = String(result.lat);
+        (form.querySelector<HTMLInputElement>('[name="lng"]')!).value = String(result.lng);
+        const nameInput = form.querySelector<HTMLInputElement>('[name="name"]')!;
+        if (result.nameSlug && !nameInput.value.trim()) nameInput.value = result.nameSlug;
+        mapsUrlStatus.textContent = '✓ Coordinates found';
+        mapsUrlStatus.className = 'text-xs mt-1 text-green-400';
+      } else {
+        mapsUrlStatus.textContent = "Couldn't parse that Maps link";
+        mapsUrlStatus.className = 'text-xs mt-1 text-amber-400';
+      }
+    });
+
+    mapsUrlInput.addEventListener('input', () => {
+      mapsUrlStatus.className = 'hidden text-xs mt-1';
     });
   </script>
 </TripLayout>
